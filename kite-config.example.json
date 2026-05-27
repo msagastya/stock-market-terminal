@@ -1,0 +1,6 @@
+{
+  "apiKey": "YOUR_KITE_API_KEY",
+  "apiSecret": "YOUR_KITE_API_SECRET",
+  "accessToken": "",
+  "sandboxMode": true
+}

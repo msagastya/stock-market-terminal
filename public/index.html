@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuraStock - Professional Stock Terminal (NSE/BSE)</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js CDN for visual rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Loading Screen Overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- Toast Notification for Errors -->
+  <div id="error-message" class="error-message hidden"></div>
+
+  <!-- Main Terminal Layout -->
+  <div class="terminal-layout">
+    
+    <!-- Left Navigation Sidebar (Glassmorphic) -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">▲</span>
+        <span class="logo-text">AuraStock</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#market" class="nav-item active" data-target="market-page">
+          <span class="nav-icon">📊</span> Market Overview
+        </a>
+        <a href="#analyzer" class="nav-item" data-target="analyzer-page">
+          <span class="nav-icon">📈</span> Stock Analyzer
+        </a>
+        <a href="#screener" class="nav-item" data-target="screener-page">
+          <span class="nav-icon">🔍</span> Market Screener
+        </a>
+        <a href="#sentiment" class="nav-item" data-target="sentiment-page">
+          <span class="nav-icon">💬</span> Sentiment & AI
+        </a>
+        <a href="#mote" class="nav-item" data-target="mote-page">
+          <span class="nav-icon">🛡️</span> Economic Moat
+        </a>
+        <a href="#kite" class="nav-item" data-target="kite-page">
+          <span class="nav-icon">🔑</span> Kite Trading
+        </a>
+        <a href="#settings" class="nav-item" data-target="settings-page">
+          <span class="nav-icon">⚙️</span> Cloud Sync
+        </a>
+      </nav>
+      
+      <!-- User profile block at bottom of sidebar -->
+      <div class="sidebar-user">
+        <div class="user-status-dot offline" id="sync-status-dot"></div>
+        <div class="user-info">
+          <div class="user-name">Guest Mode</div>
+          <div class="user-sub" id="sync-status-text">Local Storage Sync</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <div class="workspace">
+      
+      <!-- Top Sticky Header -->
+      <header class="workspace-header">
+        <div class="header-search-container">
+          <form id="search-form" autocomplete="off" style="position: relative; width: 100%;">
+            <div class="header-search-box">
+              <span style="font-size: 1.1rem; opacity: 0.6;">🔍</span>
+              <input type="text" id="search-input" placeholder="Search Indian Stocks (e.g. Reliance, TCS, HDFC)...">
+              <button type="submit" class="hidden"></button>
+            </div>
+            <!-- Autocomplete dropdown -->
+            <div id="search-suggestions" class="suggestions-dropdown hidden"></div>
+          </form>
+        </div>
+        
+        <div class="header-actions">
+          <button id="btn-live-sync" class="header-btn">
+            <span class="live-dot pulse-green"></span>
+            <span class="sync-icon">⚡</span> LIVE SYNC
+          </button>
+          <button id="btn-quick-watchlist" class="header-btn" style="background: var(--color-bg-surface-hover);">
+            ★ Watchlist
+          </button>
+        </div>
+      </header>
+
+      <!-- PAGE 1: MARKET OVERVIEW -->
+      <section id="market-page" class="page-section">
+        
+        <!-- Indices Sparklines Section -->
+        <div class="indices-grid">
+          
+          <div class="index-card card" id="index-nifty">
+            <div class="index-header">
+              <div class="index-info">
+                <span class="index-name">NIFTY 50</span>
+                <span class="index-symbol">^NSEI</span>
+              </div>
+              <div class="index-value-block">
+                <span class="index-price" id="nifty-price">23,880.35</span>
+                <span class="index-change text-negative" id="nifty-change">▼ -151.35 (-0.63%)</span>
+              </div>
+            </div>
+            <div class="index-sparkline-container">
+              <canvas id="nifty-sparkline" width="100" height="40"></canvas>
+            </div>
+          </div>
+
+          <div class="index-card card" id="index-sensex">
+            <div class="index-header">
+              <div class="index-info">
+                <span class="index-name">SENSEX</span>
+                <span class="index-symbol">^BSESN</span>
+              </div>
+              <div class="index-value-block">
+                <span class="index-price" id="sensex-price">78,500.00</span>
+                <span class="index-change text-positive" id="sensex-change">▲ +240.50 (+0.31%)</span>
+              </div>
+            </div>
+            <div class="index-sparkline-container">
+              <canvas id="sensex-sparkline" width="100" height="40"></canvas>
+            </div>
+          </div>
+
+          <div class="index-card card" id="index-niftybank">
+            <div class="index-header">
+              <div class="index-info">
+                <span class="index-name">NIFTY BANK</span>
+                <span class="index-symbol">^NSEBANK</span>
+              </div>
+              <div class="index-value-block">
+                <span class="index-price" id="niftybank-price">49,200.00</span>
+                <span class="index-change text-positive" id="niftybank-change">▲ +120.40 (+0.24%)</span>
+              </div>
+            </div>
+            <div class="index-sparkline-container">
+              <canvas id="niftybank-sparkline" width="100" height="40"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Dashboard Widgets -->
+        <div class="overview-widgets-grid">
+          
+          <!-- Left Column: Sentiment and Top Movers -->
+          <div class="overview-main-col">
+            
+            <!-- Movers Row -->
+            <div class="movers-row">
+              <div class="card" style="flex: 1;">
+                <h3 class="card-title"><span style="color:var(--color-positive);">▲</span> Top Gainers (NSE)</h3>
+                <div class="table-responsive">
+                  <table class="simple-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                      </tr>
+                    </thead>
+                    <tbody id="top-gainers-list">
+                      <!-- Filled in JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="card" style="flex: 1;">
+                <h3 class="card-title"><span style="color:var(--color-negative);">▼</span> Top Losers (NSE)</h3>
+                <div class="table-responsive">
+                  <table class="simple-table">
+                    <thead>
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                      </tr>
+                    </thead>
+                    <tbody id="top-losers-list">
+                      <!-- Filled in JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- News Card -->
+            <div class="card">
+              <h3 class="card-title">Market Headlines</h3>
+              <div id="general-news-container" class="news-grid" style="max-height: 480px;">
+                <!-- News items -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Market Health & Watchlist -->
+          <aside class="overview-side-col">
+            
+            <!-- Market Health Sentiment dial -->
+            <div class="card text-center">
+              <h3 class="card-title" style="justify-content: center;">Indian Market Health</h3>
+              <div class="ta-slider-gauge" style="max-width: 100%; margin-inline: auto;">
+                <div id="market-health-pointer" class="ta-gauge-pointer"></div>
+              </div>
+              <div class="ta-gauge-labels" style="max-width: 100%; margin-inline: auto;">
+                <span>BEARISH</span>
+                <span>NEUTRAL</span>
+                <span>BULLISH</span>
+              </div>
+              <div style="margin-top: 1rem;">
+                <div id="market-health-text" class="ta-rating-text font-bold text-neutral">Neutral</div>
+                <div id="market-health-sub" class="ta-rating-sub">Calculating stocks above SMA 20...</div>
+              </div>
+            </div>
+
+            <!-- Watchlist Panel -->
+            <div class="card">
+              <h3 class="card-title">My Watchlist</h3>
+              <div id="sidebar-watchlist-container" class="watchlist-list" style="max-height: 450px;">
+                <!-- Filled in JS -->
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+
+      </section>
+
+      <!-- PAGE 2: STOCK ANALYZER -->
+      <section id="analyzer-page" class="page-section hidden">
+        
+        <!-- Grid layout: Details/Chart + Watchlist/Portfolio -->
+        <div class="analyzer-grid">
+          
+          <div class="analyzer-main-panel">
+            
+            <!-- Stock Header Info Card -->
+            <div class="card">
+              <div class="stock-hero">
+                <div class="stock-title-area">
+                  <div class="stock-title-row">
+                    <h1 id="stock-name">Reliance Industries Ltd.</h1>
+                    <span id="stock-symbol">RELIANCE.NS</span>
+                  </div>
+                  <div class="stock-meta-badges">
+                    <span id="stock-exchange" class="badge-meta">NSE</span>
+                    <span id="stock-sector" class="badge-meta">Energy</span>
+                    <span id="stock-industry" class="badge-meta">Oil & Gas</span>
+                  </div>
+                </div>
+
+                <div class="stock-price-area">
+                  <div id="stock-price">₹1,356.30</div>
+                  <div id="stock-change" class="stock-change positive">▲ ₹5.40 (+0.40%)</div>
+                </div>
+              </div>
+
+              <div style="margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem;">
+                <p id="stock-description" class="text-muted" style="font-size: 0.9rem; line-height: 1.6;"></p>
+              </div>
+
+              <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.5rem;">
+                  <button id="btn-watchlist-toggle" class="btn-secondary">
+                    <span class="icon">☆</span> Add to Watchlist
+                  </button>
+                  <button id="btn-go-to-mote" class="btn-secondary">
+                    🛡️ Economic Mote Analysis
+                  </button>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--color-text-secondary);" id="last-updated-text"></div>
+              </div>
+            </div>
+
+            <!-- Chart Panel -->
+            <div class="card">
+              <div class="chart-controls">
+                <div class="pill-selector">
+                  <button class="timeframe-btn" data-range="1d">1D</button>
+                  <button class="timeframe-btn" data-range="5d">5D</button>
+                  <button class="timeframe-btn active" data-range="1mo">1M</button>
+                  <button class="timeframe-btn" data-range="6mo">6M</button>
+                  <button class="timeframe-btn" data-range="1y">1Y</button>
+                  <button class="timeframe-btn" data-range="5y">5Y</button>
+                </div>
+
+                <div class="indicators-bar">
+                  <span style="font-size: 0.75rem; color: var(--color-text-secondary); align-self: center; margin-right: 0.25rem;">OVERLAYS:</span>
+                  <button class="indicator-btn" data-indicator="sma20">SMA 20</button>
+                  <button class="indicator-btn" data-indicator="sma50">SMA 50</button>
+                  <button class="indicator-btn" data-indicator="bb">BBands</button>
+                </div>
+              </div>
+
+              <div class="chart-area">
+                <canvas id="stock-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Key Metrics Grid -->
+            <div class="card">
+              <h2 class="card-title">Key Statistics</h2>
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-label">Open</span>
+                  <span id="metric-open" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Day High</span>
+                  <span id="metric-high" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Day Low</span>
+                  <span id="metric-low" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Volume</span>
+                  <span id="metric-volume" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Market Cap</span>
+                  <span id="metric-mcap" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">P/E Ratio (TTM)</span>
+                  <span id="metric-pe" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">52W High</span>
+                  <span id="metric-52w-high" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">52W Low</span>
+                  <span id="metric-52w-low" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Forward P/E</span>
+                  <span id="metric-forward-pe" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Div Yield</span>
+                  <span id="metric-dividend" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Analyst Target</span>
+                  <span id="metric-target-price" class="metric-value">N/A</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Consensus Rec</span>
+                  <span id="metric-recommendation" class="metric-value">N/A</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Executive Verdict Card -->
+            <div class="card ai-verdict-card">
+              <h2 class="card-title">
+                <span>🤖 Gemini Omni Executive Verdict</span>
+                <span class="badge badge-neutral" id="ai-verdict-rating">NEUTRAL</span>
+              </h2>
+              <div class="ai-verdict-body">
+                <div class="ai-verdict-summary" id="ai-verdict-summary-text">
+                  Analyzing stock financials, technical patterns, and sentiment to formulate advice...
+                </div>
+                <div class="ai-verdict-grid">
+                  <div class="ai-verdict-box do-box">
+                    <h3 class="verdict-heading"><span class="verdict-icon">🟢</span> WHAT TO DO</h3>
+                    <ul id="ai-verdict-do-list" class="verdict-list">
+                      <li>Calculating entry zones...</li>
+                    </ul>
+                  </div>
+                  <div class="ai-verdict-box dont-box">
+                    <h3 class="verdict-heading"><span class="verdict-icon">🔴</span> WHAT NOT TO DO</h3>
+                    <ul id="ai-verdict-dont-list" class="verdict-list">
+                      <li>Calculating risk thresholds...</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="ai-verdict-disclaimer-box" id="ai-verdict-disclaimer">
+                  <h3 class="verdict-heading"><span class="verdict-icon">⚠️</span> CAUTION & DISCLAIMER</h3>
+                  <p id="ai-verdict-disclaimer-text">
+                    Stock markets involve high risk. All ratings are algorithmic simulations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Technical Analysis Dial -->
+            <div class="card">
+              <h2 class="card-title">Technical Indicators Rating</h2>
+              <div class="ta-panel">
+                <div class="ta-gauge-container">
+                  <div class="ta-slider-gauge">
+                    <div id="ta-meter-fill" class="ta-gauge-pointer"></div>
+                  </div>
+                  <div class="ta-gauge-labels">
+                    <span>BEARISH</span>
+                    <span>NEUTRAL</span>
+                    <span>BULLISH</span>
+                  </div>
+                  <div style="margin-top: 1rem;">
+                    <div id="ta-rating-text" class="ta-rating-text font-bold text-neutral">Neutral</div>
+                    <div id="ta-rating-sub" class="ta-rating-sub">Score: 0 / +5</div>
+                  </div>
+                </div>
+
+                <div class="ta-details">
+                  <h3 style="font-size: 0.95rem; text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 0.75rem; letter-spacing: 0.05em;">Breakdown</h3>
+                  <ul id="ta-signals-list" class="ta-signals-list">
+                    <!-- Dynamic -->
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Sidebar section inside stock analyzer -->
+          <aside class="analyzer-side-panel">
+            
+            <!-- Portfolio simulator card -->
+            <div class="card">
+              <h2 class="card-title">Simulated holdings</h2>
+              <div class="portfolio-summary">
+                <div class="portfolio-sum-card">
+                  <span class="portfolio-sum-label">Invested</span>
+                  <span id="portfolio-total-invested" class="portfolio-sum-val">₹0.00</span>
+                </div>
+                <div class="portfolio-sum-card">
+                  <span class="portfolio-sum-label">Value</span>
+                  <span id="portfolio-current-value" class="portfolio-sum-val">₹0.00</span>
+                </div>
+                <div class="portfolio-sum-card" style="grid-column: span 3; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 0.5rem; margin-top: 0.25rem;">
+                  <span class="portfolio-sum-label">Total P&L</span>
+                  <span id="portfolio-total-profit" class="portfolio-sum-val">₹0.00 (0.00%)</span>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="portfolio-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Shares</th>
+                      <th>Buy</th>
+                      <th>Price</th>
+                      <th>Return</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="portfolio-holdings-list">
+                    <!-- holdings -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="border-top: 1px solid var(--color-border); padding-top: 1rem;">
+                <div style="display:flex; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.75rem; gap:0.25rem;">
+                  <button type="button" class="tab-mini active" id="btn-trading-view-local">Simulate Portfolio</button>
+                  <button type="button" class="tab-mini" id="btn-trading-view-kite">Kite Order</button>
+                  <button type="button" class="tab-mini" id="btn-trading-view-gtt">Kite GTT</button>
+                </div>
+                
+                <!-- Sub-form 1: Local simulated holdings -->
+                <form id="portfolio-form" class="portfolio-buy-form" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <input type="hidden" id="portfolio-symbol">
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group">
+                      <label>Shares</label>
+                      <input type="number" id="portfolio-shares" placeholder="10" min="1" required>
+                    </div>
+                    <div class="form-group">
+                      <label>Buy Price (₹)</label>
+                      <input type="number" id="portfolio-price" placeholder="1350" min="0.01" step="0.01" required>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn-buy" style="width: 100%;">Buy Shares (Local)</button>
+                </form>
+
+                <!-- Sub-form 2: Kite Trade Order -->
+                <form id="kite-order-form" class="portfolio-buy-form hidden" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group" style="flex:1;">
+                      <label>Action</label>
+                      <select id="analyzer-kite-transaction" class="custom-input" style="height:38px; padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                        <option value="BUY">BUY (CNC)</option>
+                        <option value="SELL">SELL (CNC)</option>
+                        <option value="BUY_MIS">BUY (MIS Intraday)</option>
+                        <option value="SELL_MIS">SELL (MIS Intraday)</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                      <label>Order Type</label>
+                      <select id="analyzer-kite-type" class="custom-input" style="height:38px; padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                        <option value="MARKET">MARKET</option>
+                        <option value="LIMIT">LIMIT</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group">
+                      <label>Shares</label>
+                      <input type="number" id="analyzer-kite-qty" class="custom-input" placeholder="10" min="1" required style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                    </div>
+                    <div class="form-group">
+                      <label>Limit Price (₹)</label>
+                      <input type="number" id="analyzer-kite-price" class="custom-input" placeholder="LTP" min="0.01" step="0.01" disabled style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn-buy" id="btn-submit-kite-order" style="width: 100%; background:var(--color-accent);">Execute Kite Order</button>
+                </form>
+
+                <!-- Sub-form 3: Kite GTT Trigger -->
+                <form id="kite-gtt-form" class="portfolio-buy-form hidden" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group" style="flex:1;">
+                      <label>Action</label>
+                      <select id="analyzer-gtt-transaction" class="custom-input" style="height:38px; padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                        <option value="BUY">BUY (CNC)</option>
+                        <option value="SELL">SELL (CNC)</option>
+                      </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                      <label>Trigger Type</label>
+                      <select id="analyzer-gtt-type" class="custom-input" style="height:38px; padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                        <option value="single">Single Trigger</option>
+                        <option value="oco">OCO Trigger</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group">
+                      <label id="analyzer-gtt-trigger-label">Trigger (₹)</label>
+                      <input type="number" id="analyzer-gtt-trigger-price" class="custom-input" placeholder="e.g. 1400" min="0.01" step="0.01" required style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                    </div>
+                    <div class="form-group">
+                      <label id="analyzer-gtt-order-label">Order Price (₹)</label>
+                      <input type="number" id="analyzer-gtt-order-price" class="custom-input" placeholder="e.g. 1400" min="0.01" step="0.01" required style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                    </div>
+                  </div>
+                  
+                  <div id="analyzer-gtt-oco-fields" class="hidden" style="border-top:1px dashed rgba(255,255,255,0.06); padding-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <div style="display:flex; gap:0.5rem;">
+                      <div class="form-group">
+                        <label>SL Trigger (₹)</label>
+                        <input type="number" id="analyzer-gtt-sl-trigger-price" class="custom-input" placeholder="e.g. 1320" min="0.01" step="0.01" style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                      </div>
+                      <div class="form-group">
+                        <label>SL Order Price (₹)</label>
+                        <input type="number" id="analyzer-gtt-sl-order-price" class="custom-input" placeholder="e.g. 1318" min="0.01" step="0.01" style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap:0.5rem;">
+                    <div class="form-group" style="flex:1;">
+                      <label>Shares</label>
+                      <input type="number" id="analyzer-gtt-qty" class="custom-input" placeholder="10" min="1" required style="padding:0.4rem; font-size:0.85rem; background:rgba(255,255,255,0.02); border-color:var(--color-border);">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn-buy" id="btn-submit-kite-gtt" style="width: 100%; background:var(--color-positive); color:var(--color-bg-base); font-weight:bold;">Set GTT Trigger</button>
+                </form>
+              </div>
+            </div>
+
+            <!-- News Feed -->
+            <div class="card">
+              <h2 class="card-title">Stock Specific News</h2>
+              <div id="news-container" class="news-grid" style="max-height: 400px;">
+                <!-- news items -->
+              </div>
+            </div>
+
+          </aside>
+
+        </div>
+
+      </section>
+
+      <!-- PAGE 3: MARKET SCREENER (STOCK FINDER) -->
+      <section id="screener-page" class="page-section hidden">
+        
+        <!-- Filters Card -->
+        <div class="card">
+          <h2 class="card-title">Multi-Parameter Stock Finder</h2>
+          
+          <div class="screener-filters">
+            
+            <div class="form-group">
+              <label for="filter-sector">Sector</label>
+              <select id="filter-sector" class="custom-select">
+                <option value="ALL">All Sectors</option>
+                <option value="Financial Services">Financial Services</option>
+                <option value="Technology">Technology</option>
+                <option value="Energy & Utilities">Energy & Utilities</option>
+                <option value="Automobile">Automobile</option>
+                <option value="FMCG & Consumer">FMCG & Consumer</option>
+                <option value="Materials & Metals">Materials & Metals</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Industrials & Infrastructure">Industrials & Infrastructure</option>
+                <option value="Mutual Fund">Mutual Funds</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filter-cap">Market Cap</label>
+              <select id="filter-cap" class="custom-select">
+                <option value="ALL">All Sizes</option>
+                <option value="LARGE">Large Cap (> ₹25,000 Cr)</option>
+                <option value="MID">Mid Cap (₹5,000 - ₹25,000 Cr)</option>
+                <option value="SMALL">Small Cap (< ₹5,000 Cr)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filter-pe">Valuation (P/E Ratio)</label>
+              <select id="filter-pe" class="custom-select">
+                <option value="ALL">All Valuations</option>
+                <option value="LOW">Low P/E (< 20)</option>
+                <option value="MODERATE">Moderate P/E (20 - 45)</option>
+                <option value="HIGH">High P/E (> 45)</option>
+                <option value="NEGATIVE">Negative P/E (Loss Making)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filter-change">1D Price Change</label>
+              <select id="filter-change" class="custom-select">
+                <option value="ALL">All Direction</option>
+                <option value="GAINERS">Gainers only (+)</option>
+                <option value="LOSERS">Losers only (-)</option>
+                <option value="STRONG_GAIN">Strong Gainers (> +2%)</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="flex: 1.5; min-width: 150px;">
+              <label for="screener-search">Filter by Name/Ticker</label>
+              <input type="text" id="screener-search" placeholder="Type stock name..." class="custom-input" style="width:100%;">
+            </div>
+
+          </div>
+
+          <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--color-text-secondary);">
+            <div id="screener-results-count">Showing 0 of 0 stocks</div>
+            <div id="screener-last-updated">Cache updated: N/A</div>
+          </div>
+        </div>
+
+        <!-- Screener Results Table -->
+        <div class="card">
+          <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="portfolio-table screener-table">
+              <thead>
+                <tr>
+                  <th class="sortable" data-sort="symbol">Ticker ⇅</th>
+                  <th class="sortable" data-sort="name">Company Name ⇅</th>
+                  <th class="sortable" data-sort="sector">Sector ⇅</th>
+                  <th class="sortable text-right" data-sort="price">Price ⇅</th>
+                  <th class="sortable text-right" data-sort="changePercent">Change % ⇅</th>
+                  <th class="sortable text-right" data-sort="pe">P/E ⇅</th>
+                  <th class="sortable text-right" data-sort="marketCap">Mkt Cap ⇅</th>
+                  <th class="sortable text-right" data-sort="volume">Volume ⇅</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="screener-results-body">
+                <!-- Screener items inserted dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- PAGE 4: SENTIMENT & GEMINI ASSISTANT -->
+      <section id="sentiment-page" class="page-section hidden">
+        
+        <div class="analyzer-grid">
+          
+          <!-- News Sentiment Breakdown -->
+          <div class="analyzer-main-panel">
+            
+            <div class="card">
+              <h2 class="card-title">News Sentiment Analytics & Crawler</h2>
+              
+              <div class="sentiment-breakdown-row">
+                
+                <div class="sentiment-meter-box">
+                  <div class="sentiment-ratio-circle" id="sentiment-circle">
+                    <span id="sentiment-ratio-pct" class="font-bold">50%</span>
+                    <span style="font-size:0.75rem; opacity:0.6;">BULLISH</span>
+                  </div>
+                  <div style="margin-top: 1rem; text-align: center;">
+                    <div id="sentiment-overall-label" class="font-bold text-neutral" style="font-size:1.25rem;">NEUTRAL SENTIMENT</div>
+                    <div style="font-size: 0.8rem; color: var(--color-text-secondary);" id="sentiment-ratio-text">Analyzing news articles...</div>
+                  </div>
+                </div>
+
+                <div class="sentiment-details-box">
+                  <h3 style="font-size:0.9rem; margin-bottom: 0.5rem; text-transform: uppercase; color:var(--color-text-secondary);">Crawler Analytics</h3>
+                  <div class="crawler-bar-row">
+                    <span>Positive Buzzword Matches:</span>
+                    <span id="sentiment-pos-count" class="font-bold text-positive">0</span>
+                  </div>
+                  <div class="crawler-bar-row">
+                    <span>Negative Buzzword Matches:</span>
+                    <span id="sentiment-neg-count" class="font-bold text-negative">0</span>
+                  </div>
+                  <div class="crawler-bar-row" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:0.5rem; margin-top:0.5rem;">
+                    <span>Total crawled items:</span>
+                    <span id="sentiment-total-count" class="font-bold">0</span>
+                  </div>
+
+                  <h3 style="font-size:0.9rem; margin-top: 1.5rem; margin-bottom: 0.5rem; text-transform: uppercase; color:var(--color-text-secondary);">Density Keyword Cloud</h3>
+                  <div class="word-cloud" id="word-cloud-container">
+                    <!-- keywords list -->
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- Sentiment Headlines -->
+            <div class="card">
+              <h3 class="card-title">Analyzed Headlines Feed</h3>
+              <div id="sentiment-news-feed" class="news-grid">
+                <!-- news items with analysis -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Chatbot Sidebar: Gemini Omni Advisor -->
+          <aside class="analyzer-side-panel">
+            
+            <div class="card chatbot-card">
+              <div class="chatbot-header">
+                <span class="chatbot-avatar">🤖</span>
+                <div class="chatbot-details">
+                  <div class="chatbot-name">Gemini Omni</div>
+                  <div class="chatbot-status">Financial Co-Pilot • Online</div>
+                </div>
+              </div>
+              
+              <!-- Message Area -->
+              <div class="chatbot-messages" id="chatbot-messages-container">
+                <div class="chat-message assistant">
+                  Hello! I am Gemini Omni, your financial advisor. I have loaded all technical and price metrics for <span id="chat-active-stock">RELIANCE.NS</span>. Ask me anything about this stock!
+                </div>
+              </div>
+              
+              <!-- Quick Prompts Buttons -->
+              <div class="chatbot-quick-prompts">
+                <button class="chat-quick-btn" data-prompt="Should I BUY or SELL this stock?">Buy/Sell recommendation?</button>
+                <button class="chat-quick-btn" data-prompt="Explain the technical analysis indicators.">Explain technical signals</button>
+                <button class="chat-quick-btn" data-prompt="Analyze the company's valuation and P/E.">Analyze P/E valuation</button>
+              </div>
+
+              <!-- Message Input -->
+              <form id="chatbot-input-form" class="chatbot-input-area">
+                <input type="text" id="chatbot-user-input" placeholder="Ask about this stock..." required autocomplete="off">
+                <button type="submit" class="btn-buy" style="height:34px; padding:0 0.85rem; font-size:0.85rem;">Send</button>
+              </form>
+            </div>
+
+          </aside>
+
+        </div>
+
+      </section>
+
+      <!-- PAGE 5: ECONOMIC MOAT CHECKLIST -->
+      <section id="mote-page" class="page-section hidden">
+        
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+            <div>
+              <h2 class="card-title" style="margin-bottom:0.25rem;">Economic Moat Rating Analysis</h2>
+              <p class="text-muted" style="font-size:0.85rem;">Evaluate competitive advantages and barriers to entry for <span id="mote-active-symbol" class="font-bold text-accent">RELIANCE.NS</span>.</p>
+            </div>
+            <div class="mote-stars-container">
+              <div class="mote-stars" id="mote-stars-display">☆☆☆☆☆</div>
+              <div id="mote-score-badge" class="badge badge-neutral" style="font-size:0.8rem; margin-top:0.25rem;">0.0 / 5.0 Mote</div>
+            </div>
+          </div>
+
+          <!-- Moat questions list -->
+          <div class="mote-checklist">
+            
+            <label class="mote-item card">
+              <div class="mote-item-checkbox">
+                <input type="checkbox" id="mote-q-brand" class="mote-checkbox">
+              </div>
+              <div class="mote-item-content">
+                <div class="mote-item-title">1. Brand pricing power</div>
+                <div class="mote-item-desc text-muted">Does the company possess a strong brand name that allows it to charge higher prices than competitors without losing market share? (e.g. Apple, Coca-Cola)</div>
+              </div>
+            </label>
+
+            <label class="mote-item card">
+              <div class="mote-item-checkbox">
+                <input type="checkbox" id="mote-q-switching" class="mote-checkbox">
+              </div>
+              <div class="mote-item-content">
+                <div class="mote-item-title">2. High switching costs</div>
+                <div class="mote-item-desc text-muted">Is it expensive, complicated, or highly disruptive for customers to switch from the company's product to a competitor's product? (e.g. Oracle database, enterprise software)</div>
+              </div>
+            </label>
+
+            <label class="mote-item card">
+              <div class="mote-item-checkbox">
+                <input type="checkbox" id="mote-q-network" class="mote-checkbox">
+              </div>
+              <div class="mote-item-content">
+                <div class="mote-item-title">3. Network effects</div>
+                <div class="mote-item-desc text-muted">Does the product or service become more valuable to existing users as more new users adopt it? (e.g. Visa card network, Microsoft Office file sharing)</div>
+              </div>
+            </label>
+
+            <label class="mote-item card">
+              <div class="mote-item-checkbox">
+                <input type="checkbox" id="mote-q-cost" class="mote-checkbox">
+              </div>
+              <div class="mote-item-content">
+                <div class="mote-item-title">4. Cost advantage</div>
+                <div class="mote-item-desc text-muted">Can the company produce its goods or services at a significantly lower cost than competitors due to scale, access to raw materials, or process secrets? (e.g. Walmart, D-Mart)</div>
+              </div>
+            </label>
+
+            <label class="mote-item card">
+              <div class="mote-item-checkbox">
+                <input type="checkbox" id="mote-q-barriers" class="mote-checkbox">
+              </div>
+              <div class="mote-item-content">
+                <div class="mote-item-title">5. Regulatory or high entry barriers</div>
+                <div class="mote-item-desc text-muted">Are there massive regulatory hurdles, government licenses, patents, or capital requirements that prevent new competitors from entering? (e.g. Telecom licences, pharma patents)</div>
+              </div>
+            </label>
+
+          </div>
+
+          <!-- Notes and Cloud Save -->
+          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label for="mote-notes" class="font-bold">Qualitative Mote Analysis Notes</label>
+              <textarea id="mote-notes" rows="4" class="custom-input" placeholder="Type your competitive advantage analysis notes here..." style="width:100%; border-radius:12px; resize:vertical; padding:0.75rem; background:rgba(255,255,255,0.02);"></textarea>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+              <button id="btn-save-mote" class="btn-premium">
+                💾 Save Mote Report
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- PAGE 6: ZERODHA KITE CONNECT TERMINAL -->
+      <section id="kite-page" class="page-section hidden">
+        
+        <!-- Account Status Header Card -->
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <div class="pulse-icon" id="kite-connection-pulse" style="width:12px; height:12px; border-radius:50%; background:var(--color-warning);"></div>
+            <div>
+              <h2 style="font-size:1.2rem; margin:0; display:flex; align-items:center; gap:0.5rem;">
+                Zerodha Kite Terminal
+                <span id="kite-connection-badge" class="badge badge-neutral" style="font-size:0.75rem; padding:0.2rem 0.5rem;">SANDBOX ACTIVE</span>
+              </h2>
+              <p class="text-muted" style="font-size:0.8rem; margin:0.2rem 0 0 0;" id="kite-connection-desc">Running in persistent simulated mode. Configure API credentials below.</p>
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btn-toggle-kite-config" class="btn-secondary" style="font-size:0.85rem; padding:0.4rem 0.8rem; border-radius:8px;">⚙️ Settings</button>
+            <button id="btn-disconnect-kite" class="btn-secondary hidden" style="font-size:0.85rem; padding:0.4rem 0.8rem; border-radius:8px; background:rgba(255, 0, 85, 0.1); border-color:rgba(255, 0, 85, 0.2); color:var(--color-negative);">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Configuration Settings Panel -->
+        <div class="card hidden" id="kite-config-panel" style="margin-bottom:1.5rem; background:rgba(255,255,255,0.01); border-color:var(--color-border);">
+          <h3 class="card-title" style="font-size:0.95rem; text-transform:uppercase; margin-bottom:1rem;">Kite Connect Developer API Settings</h3>
+          <p class="text-muted" style="font-size:0.8rem; margin-bottom:1.2rem;">
+            Enter your Zerodha Kite Connect developer credentials below. The application will store them in local system configs and handle authentication callbacks automatically.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:1.2rem;">
+            <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem;">
+              <div class="form-group">
+                <label style="font-size:0.8rem;">Kite API Key</label>
+                <input type="text" id="kite-api-key" class="custom-input" placeholder="Enter API Key">
+              </div>
+              <div class="form-group">
+                <label style="font-size:0.8rem;">Kite API Secret</label>
+                <input type="password" id="kite-api-secret" class="custom-input" placeholder="Enter API Secret (saved locally)">
+              </div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-top:1px solid rgba(255,255,255,0.04); padding-top:1rem;">
+              <div style="display:flex; align-items:center; gap:0.5rem;">
+                <label class="switch-container" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                  <input type="checkbox" id="kite-sandbox-checkbox" checked style="accent-color:var(--color-accent);">
+                  <span style="font-size:0.85rem; font-weight:bold;">Enable Sandbox / Simulated Mode</span>
+                </label>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <button id="btn-save-kite-config" class="btn-premium" style="padding:0.5rem 1rem; border-radius:8px;">Save & Connect</button>
+              </div>
+            </div>
+
+            <!-- Manual Request Token Ingestion -->
+            <div style="border-top:1px solid rgba(255,255,255,0.04); padding-top:1rem; display:flex; flex-direction:column; gap:0.5rem;">
+              <label style="font-size:0.8rem; font-weight:bold;">Manual Authentication Fallback</label>
+              <p class="text-muted" style="font-size:0.75rem; margin:0;">
+                If the automatic Zerodha login callback is blocked by network firewalls, log in to Zerodha via the login URL, then paste the returned <strong>request_token</strong> below.
+              </p>
+              <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                <input type="text" id="kite-request-token-input" class="custom-input" placeholder="Paste request_token or full redirect URL here..." style="flex:1;">
+                <button id="btn-submit-request-token" class="btn-secondary" style="padding:0.4rem 1rem; border-radius:8px;">Authenticate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Overview Dashboard -->
+        <div class="portfolio-summary" style="margin-bottom:1.5rem; display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem;">
+          <div class="portfolio-sum-card" style="background:rgba(11, 19, 43, 0.3); border:1px solid var(--color-border); border-radius:12px; padding:1rem;">
+            <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Available Cash</span>
+            <span id="kite-margin-available" class="portfolio-sum-val" style="color:var(--color-text-primary); font-size:1.4rem; font-weight:bold; display:block; margin-top:0.25rem;">₹10,00,000.00</span>
+          </div>
+          <div class="portfolio-sum-card" style="background:rgba(11, 19, 43, 0.3); border:1px solid var(--color-border); border-radius:12px; padding:1rem;">
+            <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Portfolio Invested</span>
+            <span id="kite-portfolio-invested" class="portfolio-sum-val" style="color:var(--color-text-primary); font-size:1.4rem; font-weight:bold; display:block; margin-top:0.25rem;">₹0.00</span>
+          </div>
+          <div class="portfolio-sum-card" style="background:rgba(11, 19, 43, 0.3); border:1px solid var(--color-border); border-radius:12px; padding:1rem;">
+            <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Current Value</span>
+            <span id="kite-portfolio-value" class="portfolio-sum-val" style="color:var(--color-text-primary); font-size:1.4rem; font-weight:bold; display:block; margin-top:0.25rem;">₹0.00</span>
+          </div>
+          <div class="portfolio-sum-card" style="background:rgba(11, 19, 43, 0.3); border:1px solid var(--color-border); border-radius:12px; padding:1rem;">
+            <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Margins Utilised</span>
+            <span id="kite-margin-used" class="portfolio-sum-val" style="color:var(--color-text-secondary); font-size:1.4rem; font-weight:bold; display:block; margin-top:0.25rem;">₹0.00</span>
+          </div>
+          <div class="portfolio-sum-card" style="grid-column: span 2; display:flex; justify-content:space-between; align-items:center; background:rgba(11, 19, 43, 0.45); border:1px solid var(--color-border); border-radius:12px; padding:1rem;">
+            <div>
+              <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Total Return (P&L)</span>
+              <span id="kite-total-pnl" class="portfolio-sum-val font-bold text-neutral" style="font-size:1.25rem; display:block; margin-top:0.25rem;">₹0.00 (0.00%)</span>
+            </div>
+            <div style="text-align:right;">
+              <span class="portfolio-sum-label" style="font-size:0.75rem; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Day Net P&L</span>
+              <span id="kite-day-pnl" class="portfolio-sum-val text-neutral" style="font-size:1.25rem; display:block; margin-top:0.25rem;">₹0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Container Grid -->
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="tab-header-container" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-border); padding:0 1rem; background:rgba(11, 19, 43, 0.25);">
+            <div class="trading-tabs" style="display:flex; gap:0.25rem; padding-top:0.5rem;">
+              <button class="trading-tab-btn active" data-tab="kite-tab-holdings" style="background:none; border:none; color:var(--color-text-muted); padding:0.75rem 1rem; cursor:pointer; font-weight:bold; border-bottom:2px solid transparent;">💼 Holdings</button>
+              <button class="trading-tab-btn" data-tab="kite-tab-positions" style="background:none; border:none; color:var(--color-text-muted); padding:0.75rem 1rem; cursor:pointer; font-weight:bold; border-bottom:2px solid transparent;">📈 Positions</button>
+              <button class="trading-tab-btn" data-tab="kite-tab-orders" style="background:none; border:none; color:var(--color-text-muted); padding:0.75rem 1rem; cursor:pointer; font-weight:bold; border-bottom:2px solid transparent;">📝 Order Book</button>
+              <button class="trading-tab-btn" data-tab="kite-tab-gtt" style="background:none; border:none; color:var(--color-text-muted); padding:0.75rem 1rem; cursor:pointer; font-weight:bold; border-bottom:2px solid transparent;">⚡ GTT Triggers</button>
+            </div>
+            <div>
+              <button id="btn-create-gtt-shortcut" class="btn-premium" style="font-size:0.8rem; padding:0.4rem 0.8rem; border-radius:8px;">+ New GTT Trigger</button>
+            </div>
+          </div>
+
+          <!-- TAB 1: HOLDINGS -->
+          <div id="kite-tab-holdings" class="trading-tab-content table-responsive">
+            <table class="screener-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Average Price</th>
+                  <th class="text-right">LTP (Last Price)</th>
+                  <th class="text-right">Current Value</th>
+                  <th class="text-right">Total P&L</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="kite-holdings-tbody">
+                <tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">Loading holdings...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TAB 2: POSITIONS -->
+          <div id="kite-tab-positions" class="trading-tab-content table-responsive hidden">
+            <table class="screener-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th class="text-center">Product</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Avg Price</th>
+                  <th class="text-right">LTP</th>
+                  <th class="text-right">Net Value</th>
+                  <th class="text-right">M2M P&L</th>
+                </tr>
+              </thead>
+              <tbody id="kite-positions-tbody">
+                <tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">No open intraday positions.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TAB 3: ORDERS -->
+          <div id="kite-tab-orders" class="trading-tab-content table-responsive hidden">
+            <table class="screener-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Symbol</th>
+                  <th class="text-center">Action</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Price</th>
+                  <th class="text-center">Product</th>
+                  <th class="text-center">Type</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Cancel</th>
+                </tr>
+              </thead>
+              <tbody id="kite-orders-tbody">
+                <tr><td colspan="9" class="text-center text-muted" style="padding:2rem;">No orders recorded today.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TAB 4: GTT TRIGGERS -->
+          <div id="kite-tab-gtt" class="trading-tab-content table-responsive hidden">
+            <table class="screener-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th class="text-center">Type</th>
+                  <th class="text-right">Trigger Price</th>
+                  <th class="text-right">Order Price</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-center">Action</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-center">Remove</th>
+                </tr>
+              </thead>
+              <tbody id="kite-gtt-tbody">
+                <tr><td colspan="8" class="text-center text-muted" style="padding:2rem;">No active GTT triggers. Set trigger points below.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- GTT Trigger Modal / Dialog -->
+      <div id="gtt-modal" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(3, 7, 18, 0.85); backdrop-filter:blur(6px); z-index:1000; display:flex; align-items:center; justify-content:center; padding:1rem;">
+        <div class="modal-card card" style="max-width:500px; width:100%; background:var(--color-bg-base); border:1px solid var(--color-border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.75rem; margin-bottom:1.2rem;">
+            <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:0.5rem; color:var(--color-text-primary);">⚡ Create GTT Trigger Point</h3>
+            <button id="btn-close-gtt-modal" style="background:none; border:none; color:var(--color-text-muted); font-size:1.5rem; cursor:pointer; padding:0; line-height:1;">&times;</button>
+          </div>
+          <form id="gtt-modal-form" style="display:flex; flex-direction:column; gap:1rem;">
+            
+            <div class="form-group" style="position:relative; display:flex; flex-direction:column; gap:0.35rem;">
+              <label style="font-size:0.8rem; color:var(--color-text-muted);">Search Stock / Mutual Fund</label>
+              <input type="text" id="gtt-search-input" class="custom-input" placeholder="Type name or code (e.g. Reliance, TCS, or MF code)" required autocomplete="off" style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+              <div id="gtt-search-suggestions" class="suggestions-dropdown hidden" style="position:absolute; width:100%; top:65px; z-index:10; background:var(--color-bg-base); border:1px solid var(--color-border); border-radius:8px;"></div>
+            </div>
+
+            <div style="display:flex; gap:0.5rem;">
+              <div class="form-group" style="flex:1; display:flex; flex-direction:column; gap:0.35rem;">
+                <label style="font-size:0.8rem; color:var(--color-text-muted);">Trigger Action</label>
+                <select id="gtt-transaction-type" class="custom-input" style="height:38px; background:rgba(255,255,255,0.02); border-color:var(--color-border); font-size:0.85rem;">
+                  <option value="BUY">BUY (Long Entry)</option>
+                  <option value="SELL">SELL (Long Exit)</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1; display:flex; flex-direction:column; gap:0.35rem;">
+                <label style="font-size:0.8rem; color:var(--color-text-muted);">Trigger Type</label>
+                <select id="gtt-trigger-type" class="custom-input" style="height:38px; background:rgba(255,255,255,0.02); border-color:var(--color-border); font-size:0.85rem;">
+                  <option value="single">Single Target</option>
+                  <option value="oco">OCO (Target + Stop Loss)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+              <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                <label id="gtt-trigger-label" style="font-size:0.8rem; color:var(--color-text-muted);">Trigger Price (₹)</label>
+                <input type="number" id="gtt-trigger-price" class="custom-input" placeholder="e.g. 1400" min="0.01" step="0.01" required style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+              </div>
+              <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                <label id="gtt-order-label" style="font-size:0.8rem; color:var(--color-text-muted);">Limit Order Price (₹)</label>
+                <input type="number" id="gtt-order-price" class="custom-input" placeholder="e.g. 1400" min="0.01" step="0.01" required style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+              </div>
+            </div>
+
+            <!-- OCO Stop Loss Section (Initially Hidden) -->
+            <div id="gtt-oco-fields" class="hidden" style="border-top:1px dashed rgba(255,255,255,0.06); padding-top:0.75rem; display:flex; flex-direction:column; gap:0.75rem;">
+              <h4 style="margin:0; font-size:0.85rem; color:var(--color-negative); text-transform:uppercase; letter-spacing:0.05em;">🛑 Stop Loss Leg</h4>
+              <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                  <label style="font-size:0.8rem; color:var(--color-text-muted);">SL Trigger Price (₹)</label>
+                  <input type="number" id="gtt-sl-trigger-price" class="custom-input" placeholder="e.g. 1320" min="0.01" step="0.01" style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+                </div>
+                <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                  <label style="font-size:0.8rem; color:var(--color-text-muted);">SL Order Price (₹)</label>
+                  <input type="number" id="gtt-sl-order-price" class="custom-input" placeholder="e.g. 1318" min="0.01" step="0.01" style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; border-top:1px solid rgba(255,255,255,0.04); padding-top:0.75rem;">
+              <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                <label style="font-size:0.8rem; color:var(--color-text-muted);">Order Qty (Shares)</label>
+                <input type="number" id="gtt-quantity" class="custom-input" placeholder="e.g. 10" min="1" required style="background:rgba(255,255,255,0.02); border-color:var(--color-border); padding:0.6rem;">
+              </div>
+              <div class="form-group" style="display:flex; flex-direction:column; gap:0.35rem;">
+                <label style="font-size:0.8rem; color:var(--color-text-muted);">Product Code</label>
+                <select id="gtt-product" class="custom-input" style="height:38px; background:rgba(255,255,255,0.02); border-color:var(--color-border); font-size:0.85rem;">
+                  <option value="CNC">CNC (Delivery)</option>
+                  <option value="MIS">MIS (Intraday)</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-premium" style="margin-top:0.5rem; height:42px; font-weight:bold; font-size:0.95rem; border-radius:8px;">⚡ Set GTT Trigger</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Toast Notification Container for Fired GTTs -->
+      <div id="kite-toast-container" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none;"></div>
+
+      <!-- PAGE 7: CLOUD SYNC SETTINGS -->
+      <section id="settings-page" class="page-section hidden">
+        
+        <div class="card" style="max-width: 600px; margin-inline: auto;">
+          <h2 class="card-title">Firebase Cloud Sync Settings</h2>
+          
+          <p class="text-muted" style="font-size:0.9rem; margin-bottom: 1.5rem;">
+            By default, AuraStock runs in **Local Mode**, saving watchlists and simulated portfolios to your browser's local cache. 
+            To activate real-time cross-device cloud synchronization, connect your own **Firebase Project** below.
+          </p>
+
+          <!-- Configuration Status -->
+          <div class="card" style="background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.04); margin-bottom:1.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="font-bold">Sync Mode:</span>
+              <span class="badge badge-neutral" id="settings-sync-status-badge">LOCAL MODE</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--color-text-secondary); margin-top:0.25rem;" id="settings-sync-status-desc">
+              Data is saved locally.
+            </div>
+          </div>
+
+          <!-- Configuration Form -->
+          <form id="settings-firebase-form" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label>API Key</label>
+              <input type="text" id="fb-apiKey" placeholder="AIzaSy..." required class="custom-input">
+            </div>
+            
+            <div class="form-group">
+              <label>Auth Domain</label>
+              <input type="text" id="fb-authDomain" placeholder="your-project.firebaseapp.com" required class="custom-input">
+            </div>
+
+            <div class="form-group">
+              <label>Project ID</label>
+              <input type="text" id="fb-projectId" placeholder="your-project" required class="custom-input">
+            </div>
+
+            <div class="form-group">
+              <label>Storage Bucket</label>
+              <input type="text" id="fb-storageBucket" placeholder="your-project.appspot.com" class="custom-input">
+            </div>
+
+            <div class="form-group">
+              <label>App ID</label>
+              <input type="text" id="fb-appId" placeholder="1:123456:web:abcd" required class="custom-input">
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="button" id="btn-clear-settings" class="btn-secondary">Disconnect Firebase</button>
+              <button type="submit" class="btn-premium">Connect & Sync</button>
+            </div>
+          </form>
+
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Bootstrapping application module -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

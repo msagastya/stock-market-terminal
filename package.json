@@ -1,0 +1,26 @@
+{
+  "name": "stock-market-analyzer",
+  "version": "1.0.0",
+  "description": "End-to-End Stock Market Analyzer for NSE/BSE",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "stock",
+    "nse",
+    "bse",
+    "analyzer",
+    "yfinance"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "technicalindicators": "^3.1.0",
+    "yahoo-finance2": "^3.0.1"
+  }
+}
