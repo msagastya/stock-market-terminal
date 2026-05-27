@@ -878,6 +878,103 @@ app.get('/api/screener', (req, res) => {
   });
 });
 
+// 7b. High Frequency Live Tickers Sync Endpoint
+app.post('/api/live-quotes', async (req, res) => {
+  const { symbols } = req.body;
+  if (!symbols || !Array.isArray(symbols)) {
+    return res.status(400).json({ error: 'Array of symbols is required' });
+  }
+
+  try {
+    const results = [];
+    const stockSymbols = [];
+    const mfSymbols = [];
+
+    symbols.forEach(sym => {
+      const trimmedSym = sym.toUpperCase().trim();
+      if (trimmedSym.match(/^\d+$/)) {
+        mfSymbols.push(trimmedSym);
+      } else {
+        stockSymbols.push(trimmedSym);
+      }
+    });
+
+    // 1. Fetch stocks from Yahoo Finance in parallel
+    if (stockSymbols.length > 0) {
+      try {
+        const quotes = await yahooFinance.quote(stockSymbols);
+        const quotesArr = Array.isArray(quotes) ? quotes : [quotes];
+        quotesArr.forEach(q => {
+          if (q) {
+            results.push({
+              symbol: q.symbol,
+              price: q.regularMarketPrice || 0,
+              change: q.regularMarketChange || 0,
+              changePercent: q.regularMarketChangePercent || 0,
+              volume: q.regularMarketVolume || 0,
+              high: q.regularMarketDayHigh || 0,
+              low: q.regularMarketDayLow || 0,
+              open: q.regularMarketOpen || 0,
+              prevClose: q.regularMarketPreviousClose || 0
+            });
+          }
+        });
+      } catch (err) {
+        console.warn(`Live quotes stock batch fetch failed:`, err.message);
+      }
+    }
+
+    // 2. Retrieve mutual funds from AMFI cache
+    if (mfSymbols.length > 0) {
+      mfSymbols.forEach(code => {
+        const mf = amfiCache.find(item => item.schemeCode === code);
+        if (mf) {
+          results.push({
+            symbol: mf.schemeCode,
+            price: mf.nav,
+            change: 0,
+            changePercent: 0,
+            volume: 0,
+            high: mf.nav,
+            low: mf.nav,
+            open: mf.nav,
+            prevClose: mf.nav
+          });
+        }
+      });
+    }
+
+    // 3. Update the global memory screener cache with new prices and evaluate GTT triggers
+    if (results.length > 0) {
+      results.forEach(resItem => {
+        const idx = cache.screener.findIndex(s => s.symbol === resItem.symbol);
+        if (idx !== -1) {
+          cache.screener[idx].price = resItem.price;
+          cache.screener[idx].change = resItem.change;
+          cache.screener[idx].changePercent = resItem.changePercent;
+          if (resItem.volume) cache.screener[idx].volume = resItem.volume;
+          cache.screener[idx].high = resItem.high;
+          cache.screener[idx].low = resItem.low;
+          cache.screener[idx].open = resItem.open;
+          cache.screener[idx].prevClose = resItem.prevClose;
+        }
+      });
+
+      // Run trigger evaluation with the fresh quotes
+      try {
+        kiteService.evaluateTriggers(cache.screener);
+      } catch (gttErr) {
+        console.error('GTT trigger evaluation error during live sync:', gttErr.message);
+      }
+    }
+
+    res.json({ success: true, quotes: results });
+  } catch (error) {
+    console.error('Error fetching live quotes:', error);
+    res.status(500).json({ error: 'Failed to fetch live quotes: ' + error.message });
+  }
+});
+
 // 8. Force Cache Rebuild Route
 app.post('/api/refresh', async (req, res) => {
   try {

@@ -488,74 +488,81 @@ async function refreshMarketOverview() {
   refreshSidebarWatchlist();
 }
 
-async function refreshSidebarWatchlist() {
-  elements.sidebarWatchlistContainer.innerHTML = '';
-  
+async function refreshSidebarWatchlist(useCacheOnly = false) {
   if (state.watchlist.length === 0) {
     elements.sidebarWatchlistContainer.innerHTML = '<div class="empty-state">Watchlist is empty. Search a ticker to add.</div>';
     return;
   }
 
   const listContainer = elements.sidebarWatchlistContainer;
-  listContainer.innerHTML = '<div class="loader-small"></div>';
-
-  try {
-    const promises = state.watchlist.map(async (symbol) => {
-      try {
-        const quote = await api.getStockQuote(symbol);
-        state.quotesCache[symbol] = quote;
-        return quote;
-      } catch (err) {
-        console.error(`Error loading watchlist ticker ${symbol}:`, err);
-        return { symbol, name: symbol, price: null, changePercent: null };
-      }
-    });
-
-    const quotes = await Promise.all(promises);
-    listContainer.innerHTML = '';
-
-    quotes.forEach(quote => {
-      const card = document.createElement('div');
-      card.className = `watchlist-card ${state.currentSymbol === quote.symbol ? 'active' : ''}`;
-      
-      const isUp = quote.changePercent >= 0;
-      const priceText = quote.price !== null ? `₹${quote.price.toFixed(2)}` : 'N/A';
-      const pctText = quote.changePercent !== null 
-        ? `${isUp ? '+' : ''}${quote.changePercent.toFixed(2)}%` 
-        : '';
-      const colorClass = isUp ? 'text-positive' : 'text-negative';
-
-      card.innerHTML = `
-        <div class="watchlist-info">
-          <div class="watchlist-symbol">${quote.symbol}</div>
-          <div class="watchlist-name">${quote.name}</div>
-        </div>
-        <div class="watchlist-price-block">
-          <div class="watchlist-price">${priceText}</div>
-          <div class="watchlist-pct ${colorClass}">${pctText}</div>
-        </div>
-        <button class="watchlist-delete-btn" data-symbol="${quote.symbol}">×</button>
-      `;
-
-      card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('watchlist-delete-btn')) {
-          e.stopPropagation();
-          const symToDelete = e.target.getAttribute('data-symbol');
-          state.watchlist = state.watchlist.filter(s => s !== symToDelete);
-          saveWatchlistLocally();
-          refreshSidebarWatchlist();
-          updateWatchlistBtnUI();
-          return;
-        }
-        loadStock(quote.symbol);
-        navigateToPage('analyzer-page');
+  const allCached = state.watchlist.every(sym => state.quotesCache[sym]);
+  
+  let quotes = [];
+  if (useCacheOnly && allCached) {
+    quotes = state.watchlist.map(sym => state.quotesCache[sym]);
+  } else {
+    try {
+      const res = await api.getLiveQuotes(state.watchlist);
+      const liveQuotes = res.quotes || [];
+      liveQuotes.forEach(q => {
+        const screenItem = state.screenerData?.find(s => s.symbol === q.symbol);
+        q.name = screenItem?.name || state.quotesCache[q.symbol]?.name || q.symbol;
+        state.quotesCache[q.symbol] = q;
       });
-
-      listContainer.appendChild(card);
-    });
-  } catch (error) {
-    listContainer.innerHTML = '<div class="empty-state">Error loading watchlist items</div>';
+      
+      // Ensure all watchlist items exist in quotesCache
+      state.watchlist.forEach(sym => {
+        if (!state.quotesCache[sym]) {
+          state.quotesCache[sym] = { symbol: sym, name: sym, price: 0, changePercent: 0 };
+        }
+      });
+      quotes = state.watchlist.map(sym => state.quotesCache[sym]);
+    } catch (err) {
+      console.error('Error batch loading watchlist:', err);
+      quotes = state.watchlist.map(sym => state.quotesCache[sym] || { symbol: sym, name: sym, price: null, changePercent: null });
+    }
   }
+
+  listContainer.innerHTML = '';
+  quotes.forEach(quote => {
+    if (!quote) return;
+    const card = document.createElement('div');
+    card.className = `watchlist-card ${state.currentSymbol === quote.symbol ? 'active' : ''}`;
+    
+    const isUp = quote.changePercent >= 0;
+    const priceText = quote.price !== null && quote.price !== undefined ? `₹${quote.price.toFixed(2)}` : 'N/A';
+    const pctText = quote.changePercent !== null && quote.changePercent !== undefined 
+      ? `${isUp ? '+' : ''}${quote.changePercent.toFixed(2)}%` 
+      : '';
+    const colorClass = isUp ? 'text-positive' : 'text-negative';
+
+    card.innerHTML = `
+      <div class="watchlist-info">
+        <div class="watchlist-symbol">${quote.symbol}</div>
+        <div class="watchlist-name">${quote.name || quote.symbol}</div>
+      </div>
+      <div class="watchlist-price-block">
+        <div class="watchlist-price">${priceText}</div>
+        <div class="watchlist-pct ${colorClass}">${pctText}</div>
+      </div>
+      <button class="watchlist-delete-btn" data-symbol="${quote.symbol}">×</button>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('watchlist-delete-btn')) {
+        e.stopPropagation();
+        const symToDelete = e.target.getAttribute('data-symbol');
+        state.watchlist = state.watchlist.filter(s => s !== symToDelete);
+        saveWatchlistLocally();
+        refreshSidebarWatchlist();
+        updateWatchlistBtnUI();
+        return;
+      }
+      loadStock(quote.symbol);
+      navigateToPage('analyzer-page');
+    });
+    listContainer.appendChild(card);
+  });
 }
 
 // -------------------------------------------------------------
@@ -2521,16 +2528,173 @@ async function init() {
   // 4. Initial render of Market Overview and sub components
   await refreshMarketOverview();
   
+  // Helper to gather visible assets to prioritize live quoting
+  function getActiveSymbols() {
+    const symbols = new Set();
+    
+    // Sidebar watchlist is always visible
+    if (state.watchlist && Array.isArray(state.watchlist)) {
+      state.watchlist.forEach(sym => symbols.add(sym.toUpperCase()));
+    }
+    
+    if (state.activePage === 'analyzer-page') {
+      if (state.currentSymbol) {
+        symbols.add(state.currentSymbol.toUpperCase());
+      }
+    } else if (state.activePage === 'market-page') {
+      // Gainers & Losers
+      const rows = [
+        ...elements.topGainersList.querySelectorAll('tr'),
+        ...elements.topLosersList.querySelectorAll('tr')
+      ];
+      rows.forEach(tr => {
+        const sym = tr.getAttribute('data-symbol');
+        if (sym) symbols.add(sym.toUpperCase());
+      });
+
+      // Screener results (visible slice)
+      const screenerRows = [...elements.screenerResultsBody.querySelectorAll('tr')].slice(0, 30);
+      screenerRows.forEach(tr => {
+        const cellText = tr.cells[0]?.textContent?.trim();
+        if (cellText && !cellText.includes('Showing')) symbols.add(cellText.toUpperCase());
+      });
+    } else if (state.activePage === 'kite-page') {
+      const holdingRows = [...elements.kiteHoldingsTbody.querySelectorAll('tr')];
+      holdingRows.forEach(tr => {
+        const cellText = tr.cells[0]?.textContent?.trim();
+        if (cellText && !cellText.includes('No holdings')) symbols.add(cellText.toUpperCase());
+      });
+      const positionRows = [...elements.kitePositionsTbody.querySelectorAll('tr')];
+      positionRows.forEach(tr => {
+        const cellText = tr.cells[0]?.textContent?.trim();
+        if (cellText && !cellText.includes('No open positions')) symbols.add(cellText.toUpperCase());
+      });
+      const gttRows = [...elements.kiteGttTbody.querySelectorAll('tr')];
+      gttRows.forEach(tr => {
+        const cellText = tr.cells[0]?.textContent?.trim();
+        if (cellText && !cellText.includes('No GTT triggers')) symbols.add(cellText.toUpperCase());
+      });
+    }
+    return Array.from(symbols);
+  }
+
   // Set background polling loop for market data updates (every 2s)
   let ticksCount = 0;
   setInterval(async () => {
     ticksCount++;
-    if (state.activePage === 'analyzer-page') {
-      await loadStock(state.currentSymbol, true);
-    } else if (state.activePage === 'market-page' && ticksCount % 7 === 0) {
+    
+    // 1. Fetch live quotes for active symbols in a single batch
+    const activeSymbols = getActiveSymbols();
+    if (activeSymbols.length > 0) {
+      try {
+        const res = await api.getLiveQuotes(activeSymbols);
+        const liveQuotes = res.quotes || [];
+        
+        // Update local client quote cache
+        liveQuotes.forEach(q => {
+          state.quotesCache[q.symbol] = {
+            ...state.quotesCache[q.symbol],
+            ...q
+          };
+          
+          // Also update state.screenerData if present
+          if (state.screenerData) {
+            const idx = state.screenerData.findIndex(s => s.symbol === q.symbol);
+            if (idx !== -1) {
+              state.screenerData[idx] = {
+                ...state.screenerData[idx],
+                ...q
+              };
+            }
+          }
+        });
+
+        // 2. Perform granular in-place UI updates
+        // Watchlist update (cheap re-render since we have cached data)
+        await refreshSidebarWatchlist(true);
+
+        // Analyzer details update (if on analyzer page)
+        if (state.activePage === 'analyzer-page' && state.currentSymbol) {
+          const q = state.quotesCache[state.currentSymbol.toUpperCase()];
+          if (q) {
+            elements.stockPrice.textContent = `₹${q.price.toFixed(2)}`;
+            const isUp = q.change >= 0;
+            elements.stockChange.className = `stock-change ${isUp ? 'positive' : 'negative'}`;
+            elements.stockChange.textContent = `${isUp ? '▲' : '▼'} ₹${Math.abs(q.change).toFixed(2)} (${isUp ? '+' : ''}${q.changePercent.toFixed(2)}%)`;
+            if (elements.lastUpdatedText) {
+              elements.lastUpdatedText.textContent = `Last active tick: ${new Date().toLocaleTimeString()}`;
+            }
+            if (elements.portfolioPrice) {
+              elements.portfolioPrice.value = q.price.toFixed(2);
+            }
+          }
+        }
+
+        // Market/Screener rows update in-place
+        if (state.activePage === 'market-page') {
+          // Update gainers/losers in-place
+          const moverRows = [
+            ...elements.topGainersList.querySelectorAll('tr'),
+            ...elements.topLosersList.querySelectorAll('tr')
+          ];
+          moverRows.forEach(tr => {
+            const sym = tr.getAttribute('data-symbol');
+            const q = state.quotesCache[sym];
+            if (q) {
+              const priceCell = tr.cells[1];
+              const pctCell = tr.cells[2];
+              if (priceCell) priceCell.textContent = `₹${q.price.toFixed(2)}`;
+              if (pctCell) {
+                const isUp = q.changePercent >= 0;
+                pctCell.className = isUp ? 'text-positive' : 'text-negative';
+                pctCell.textContent = `${isUp ? '+' : ''}${q.changePercent.toFixed(2)}%`;
+              }
+            }
+          });
+
+          // Update visible screener table rows in-place
+          const screenerRows = [...elements.screenerResultsBody.querySelectorAll('tr')];
+          screenerRows.forEach(tr => {
+            const sym = tr.cells[0]?.textContent?.trim();
+            const q = state.quotesCache[sym];
+            if (q) {
+              const isUp = q.changePercent >= 0;
+              const priceCell = tr.cells[3];
+              const pctCell = tr.cells[4];
+              const volCell = tr.cells[7];
+              
+              if (priceCell) priceCell.textContent = `₹${q.price.toFixed(2)}`;
+              if (pctCell) {
+                pctCell.className = `text-right ${isUp ? 'text-positive' : 'text-negative'}`;
+                pctCell.textContent = `${isUp ? '+' : ''}${q.changePercent.toFixed(2)}%`;
+              }
+              if (volCell && q.volume) {
+                volCell.textContent = q.volume.toLocaleString('en-IN');
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Live quotes active sync failed:', err.message);
+      }
+    }
+
+    // 3. Page specific background loops (Indices, Kite connection details)
+    if (state.activePage === 'market-page' && ticksCount % 3 === 0) {
       await refreshIndices();
     } else if (state.activePage === 'kite-page') {
       await refreshKiteTerminalData();
+    }
+
+    // 4. Secondary process: Full refresh of master lists/database every 30 seconds (15 ticks)
+    if (ticksCount % 15 === 0) {
+      try {
+        console.log('Triggering background secondary full refresh...');
+        await api.triggerLiveSync();
+        await loadScreenerData();
+      } catch (refreshErr) {
+        console.error('Secondary full refresh failed:', refreshErr.message);
+      }
     }
   }, 2000);
 }

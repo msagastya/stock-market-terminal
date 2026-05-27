@@ -171,11 +171,18 @@ export async function placeKiteGTT(gttParams) {
   return response.json();
 }
 
-export async function deleteKiteGTT(triggerId) {
-  const response = await fetch(`${API_BASE}/kite/gtt/${encodeURIComponent(triggerId)}`, {
-    method: 'DELETE'
+export async function getLiveQuotes(symbols) {
+  const response = await fetch(`${API_BASE}/live-quotes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ symbols })
   });
+  if (!response.ok) {
+    const err = response.json().catch(() => ({ error: 'Fetch failed' }));
+    throw new Error(err.error || 'Failed to fetch live quotes');
+  }
   return response.json();
 }
+
 
 
