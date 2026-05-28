@@ -496,7 +496,7 @@ app.get('/api/quote/:symbol', async (req, res) => {
     let profile = {};
     try {
       const summary = await safeYF(yahooFinance.quoteSummary(symbol, {
-        modules: ['assetProfile', 'summaryDetail', 'financialData']
+        modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics']
       }));
       if (summary) {
         profile = {
@@ -510,7 +510,16 @@ app.get('/api/quote/:symbol', async (req, res) => {
           fiftyTwoWeekHigh: summary.summaryDetail?.fiftyTwoWeekHigh,
           fiftyTwoWeekLow: summary.summaryDetail?.fiftyTwoWeekLow,
           recommendation: summary.financialData?.recommendationKey,
-          targetPrice: summary.financialData?.targetMedianPrice
+          targetPrice: summary.financialData?.targetMedianPrice,
+          // Fundamentals for moat/analysis
+          operatingMargins: summary.financialData?.operatingMargins,
+          returnOnEquity: summary.financialData?.returnOnEquity,
+          returnOnAssets: summary.financialData?.returnOnAssets,
+          debtToEquity: summary.financialData?.debtToEquity,
+          grossMargins: summary.financialData?.grossMargins,
+          profitMargins: summary.financialData?.profitMargins,
+          revenueGrowth: summary.financialData?.revenueGrowth,
+          freeCashFlow: summary.financialData?.freeCashflow || summary.financialData?.freeCashFlow
         };
       }
     } catch (e) {

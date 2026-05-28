@@ -165,11 +165,45 @@ const lastPriceLinePlugin = {
   }
 };
 
+const candlestickWicksPlugin = {
+  id: 'candlestickWicks',
+  afterDatasetsDraw: (chart) => {
+    if (chart.config.type !== 'bar') return;
+    const dataset = chart.data.datasets[0];
+    if (!dataset || !dataset.isCandlestick) return;
+
+    const ctx = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    const rawPoints = dataset.rawPoints;
+
+    ctx.save();
+    meta.data.forEach((bar, index) => {
+      const point = rawPoints[index];
+      if (!point) return;
+
+      const x = bar.x;
+      const yHigh = chart.scales.y.getPixelForValue(point.high);
+      const yLow = chart.scales.y.getPixelForValue(point.low);
+
+      const color = point.close >= point.open ? '#00f5a0' : '#ff0055';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(x, yHigh);
+      ctx.lineTo(x, yLow);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+};
+
 export class ChartManager {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
     this.chart = null;
     this.stockData = null;
+    this.chartType = 'line'; // 'line' or 'candlestick'
     this.activeIndicators = {
       sma20: false,
       sma50: false,
@@ -177,11 +211,22 @@ export class ChartManager {
     };
   }
 
+  setChartType(type) {
+    if (type === 'line' || type === 'candlestick') {
+      this.chartType = type;
+      if (this.stockData) {
+        const price = this.stockData.points[this.stockData.points.length - 1]?.close || 0;
+        const prevPrice = this.stockData.points[0]?.close || 0;
+        this.render(this.stockData, price >= prevPrice);
+      }
+    }
+  }
+
   render(stockData, isChangePositive = true) {
     this.stockData = stockData;
-    const points = stockData.points;
+    const points = [...stockData.points];
     points.sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     const labels = points.map(p => {
       const d = new Date(p.date);
       if (stockData.interval === '5m' || stockData.interval === '15m') {
@@ -190,9 +235,10 @@ export class ChartManager {
         return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' });
       }
     });
-    
+
     const prices = points.map(p => p.close);
-    
+    const volumes = points.map(p => p.volume || 0);
+
     if (this.chart) {
       this.chart.destroy();
     }
@@ -203,8 +249,25 @@ export class ChartManager {
     priceFillGradient.addColorStop(0, isChangePositive ? 'rgba(0, 245, 160, 0.15)' : 'rgba(255, 0, 85, 0.15)');
     priceFillGradient.addColorStop(1, 'rgba(5, 20, 38, 0)');
 
-    const datasets = [
-      {
+    const datasets = [];
+
+    // 1. Add Main Price Dataset
+    if (this.chartType === 'candlestick') {
+      // Candlestick float data: [open, close]
+      const candleData = points.map(p => [p.open, p.close]);
+      datasets.push({
+        label: 'Price',
+        data: candleData,
+        backgroundColor: points.map(p => p.close >= p.open ? 'rgba(0, 245, 160, 0.75)' : 'rgba(255, 0, 85, 0.75)'),
+        borderColor: points.map(p => p.close >= p.open ? '#00f5a0' : '#ff0055'),
+        borderWidth: 1.5,
+        isCandlestick: true,
+        rawPoints: points, // Passed to plugin for high/low wick rendering
+        order: 1
+      });
+    } else {
+      // Classic Line chart
+      datasets.push({
         label: 'Price',
         data: prices,
         borderColor: priceColor,
@@ -218,12 +281,27 @@ export class ChartManager {
         backgroundColor: priceFillGradient,
         tension: 0.4,
         order: 1
-      }
-    ];
+      });
+    }
 
+    // 2. Add Volume Dataset linked to secondary axis
+    const maxVolume = Math.max(...volumes);
+    datasets.push({
+      type: 'bar',
+      label: 'Volume',
+      data: volumes,
+      backgroundColor: points.map(p => p.close >= p.open ? 'rgba(0, 245, 160, 0.2)' : 'rgba(255, 0, 85, 0.2)'),
+      yAxisID: 'yVolume',
+      order: 10,
+      categoryPercentage: 0.8,
+      barPercentage: 0.8
+    });
+
+    // 3. Add Indicators if active
     if (this.activeIndicators.sma20) {
       const sma20Data = calculateSMA(prices, 20);
       datasets.push({
+        type: 'line',
         label: 'SMA 20',
         data: sma20Data,
         borderColor: '#3b82f6',
@@ -239,6 +317,7 @@ export class ChartManager {
     if (this.activeIndicators.sma50) {
       const sma50Data = calculateSMA(prices, 50);
       datasets.push({
+        type: 'line',
         label: 'SMA 50',
         data: sma50Data,
         borderColor: '#eab308',
@@ -254,6 +333,7 @@ export class ChartManager {
     if (this.activeIndicators.bb) {
       const { middle, upper, lower } = calculateBollingerBands(prices, 20);
       datasets.push({
+        type: 'line',
         label: 'Upper Band',
         data: upper,
         borderColor: 'rgba(168, 85, 247, 0.4)',
@@ -264,6 +344,7 @@ export class ChartManager {
         order: 4
       });
       datasets.push({
+        type: 'line',
         label: 'Lower Band',
         data: lower,
         borderColor: 'rgba(168, 85, 247, 0.4)',
@@ -275,13 +356,19 @@ export class ChartManager {
       });
     }
 
+    // Register custom wicks plugin and standard price line
+    const pluginsList = [lastPriceLinePlugin];
+    if (this.chartType === 'candlestick') {
+      pluginsList.push(candlestickWicksPlugin);
+    }
+
     this.chart = new Chart(ctx, {
-      type: 'line',
+      type: this.chartType === 'candlestick' ? 'bar' : 'line',
       data: {
         labels: labels,
         datasets: datasets
       },
-      plugins: [lastPriceLinePlugin],
+      plugins: pluginsList,
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -296,6 +383,7 @@ export class ChartManager {
             labels: {
               color: '#94a3b8',
               boxWidth: 12,
+              filter: (item) => item.text !== 'Volume', // Hide volume label from legend for clarity
               font: {
                 family: 'Geist, sans-serif',
                 size: 11
@@ -313,8 +401,23 @@ export class ChartManager {
             callbacks: {
               label: function(context) {
                 let label = context.dataset.label || '';
+                if (label === 'Volume') {
+                  return `Volume: ${context.parsed.y.toLocaleString('en-IN')}`;
+                }
                 if (label) label += ': ';
-                if (context.parsed.y !== null) {
+                
+                if (context.dataset.isCandlestick) {
+                  // Standard OHLC format for candlestick tooltip
+                  const raw = context.dataset.rawPoints[context.dataIndex];
+                  if (raw) {
+                    return [
+                      `Open: ₹${raw.open.toFixed(2)}`,
+                      `High: ₹${raw.high.toFixed(2)}`,
+                      `Low: ₹${raw.low.toFixed(2)}`,
+                      `Close: ₹${raw.close.toFixed(2)}`
+                    ];
+                  }
+                } else if (context.parsed.y !== null) {
                   label += '₹' + context.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
                 return label;
@@ -342,6 +445,13 @@ export class ChartManager {
                 return '₹' + value.toLocaleString();
               }
             }
+          },
+          yVolume: {
+            position: 'right',
+            grid: { display: false },
+            ticks: { display: false },
+            min: 0,
+            max: maxVolume > 0 ? maxVolume * 4 : 100 // Force volume to stay in the bottom 25% height of chart
           }
         }
       }
@@ -352,8 +462,8 @@ export class ChartManager {
     if (indicatorKey in this.activeIndicators) {
       this.activeIndicators[indicatorKey] = !this.activeIndicators[indicatorKey];
       if (this.stockData) {
-        const price = this.stockData.points[this.stockData.points.length - 1].close;
-        const prevPrice = this.stockData.points[0].close;
+        const price = this.stockData.points[this.stockData.points.length - 1]?.close || 0;
+        const prevPrice = this.stockData.points[0]?.close || 0;
         this.render(this.stockData, price >= prevPrice);
       }
     }

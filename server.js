@@ -496,7 +496,7 @@ app.get('/api/quote/:symbol', async (req, res) => {
     let profile = {};
     try {
       const summary = await safeYF(yahooFinance.quoteSummary(symbol, {
-        modules: ['assetProfile', 'summaryDetail', 'financialData']
+        modules: ['assetProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics']
       }));
       if (summary) {
         profile = {
@@ -510,7 +510,16 @@ app.get('/api/quote/:symbol', async (req, res) => {
           fiftyTwoWeekHigh: summary.summaryDetail?.fiftyTwoWeekHigh,
           fiftyTwoWeekLow: summary.summaryDetail?.fiftyTwoWeekLow,
           recommendation: summary.financialData?.recommendationKey,
-          targetPrice: summary.financialData?.targetMedianPrice
+          targetPrice: summary.financialData?.targetMedianPrice,
+          // Fundamentals for moat/analysis
+          operatingMargins: summary.financialData?.operatingMargins,
+          returnOnEquity: summary.financialData?.returnOnEquity,
+          returnOnAssets: summary.financialData?.returnOnAssets,
+          debtToEquity: summary.financialData?.debtToEquity,
+          grossMargins: summary.financialData?.grossMargins,
+          profitMargins: summary.financialData?.profitMargins,
+          revenueGrowth: summary.financialData?.revenueGrowth,
+          freeCashFlow: summary.financialData?.freeCashflow || summary.financialData?.freeCashFlow
         };
       }
     } catch (e) {
@@ -1203,8 +1212,29 @@ app.delete('/api/kite/gtt/:id', async (req, res) => {
   }
 });
 
+const os = require('os');
+function getNetworkIPs() {
+  const interfaces = os.networkInterfaces();
+  const ips = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ips.push(iface.address);
+      }
+    }
+  }
+  return ips;
+}
+
 app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`==================================================`);
+  console.log(`Server running successfully!`);
+  console.log(`- Local Access:   http://localhost:${PORT}`);
+  const networkIps = getNetworkIPs();
+  networkIps.forEach(ip => {
+    console.log(`- Network Device: http://${ip}:${PORT} (Use this to connect from your phone or tablet on the same Wi-Fi)`);
+  });
+  console.log(`==================================================`);
   // Run initial cache refresh on startup
   await refreshMarketCache();
   // Set background polling interval (every 30 seconds)

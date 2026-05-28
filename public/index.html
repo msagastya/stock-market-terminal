@@ -255,6 +255,7 @@
                     <span id="stock-exchange" class="badge-meta">NSE</span>
                     <span id="stock-sector" class="badge-meta">Energy</span>
                     <span id="stock-industry" class="badge-meta">Oil & Gas</span>
+                    <span id="stock-moat-badge" class="badge-meta badge-moat wide-moat" style="cursor: pointer; font-weight: bold; background: linear-gradient(135deg, rgba(0, 245, 160, 0.1), rgba(0, 245, 160, 0.05)); border: 1px solid rgba(0, 245, 160, 0.2); text-transform: uppercase; color: var(--color-positive);" title="Competitive Moat Status - Click to see breakdown">Calculating Moat...</span>
                   </div>
                 </div>
 
@@ -283,7 +284,7 @@
 
             <!-- Chart Panel -->
             <div class="card">
-              <div class="chart-controls">
+              <div class="chart-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                 <div class="pill-selector">
                   <button class="timeframe-btn" data-range="1d">1D</button>
                   <button class="timeframe-btn" data-range="5d">5D</button>
@@ -293,11 +294,18 @@
                   <button class="timeframe-btn" data-range="5y">5Y</button>
                 </div>
 
-                <div class="indicators-bar">
-                  <span style="font-size: 0.75rem; color: var(--color-text-secondary); align-self: center; margin-right: 0.25rem;">OVERLAYS:</span>
-                  <button class="indicator-btn" data-indicator="sma20">SMA 20</button>
-                  <button class="indicator-btn" data-indicator="sma50">SMA 50</button>
-                  <button class="indicator-btn" data-indicator="bb">BBands</button>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                  <div class="chart-type-selector" style="display: flex; gap: 2px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 2px; border-radius: 8px; height: 30px; align-items: center;">
+                    <button id="btn-chart-type-line" class="chart-type-btn active" data-type="line" style="background: none; border: none; padding: 2px 8px; font-size: 0.75rem; color: var(--color-text); border-radius: 6px; cursor: pointer; transition: all 0.2s ease; height: 100%;">Line</button>
+                    <button id="btn-chart-type-candles" class="chart-type-btn" data-type="candlestick" style="background: none; border: none; padding: 2px 8px; font-size: 0.75rem; color: var(--color-text-secondary); border-radius: 6px; cursor: pointer; transition: all 0.2s ease; height: 100%;">Candles</button>
+                  </div>
+
+                  <div class="indicators-bar">
+                    <span style="font-size: 0.75rem; color: var(--color-text-secondary); align-self: center; margin-right: 0.25rem;">OVERLAYS:</span>
+                    <button class="indicator-btn" data-indicator="sma20">SMA 20</button>
+                    <button class="indicator-btn" data-indicator="sma50">SMA 50</button>
+                    <button class="indicator-btn" data-indicator="bb">BBands</button>
+                  </div>
                 </div>
               </div>
 
@@ -357,6 +365,74 @@
                 <div class="metric-card">
                   <span class="metric-label">Consensus Rec</span>
                   <span id="metric-recommendation" class="metric-value">N/A</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fundamentals Card -->
+            <div class="card" id="fundamentals-card">
+              <h2 class="card-title">Fundamental Trends & Management Ratios</h2>
+              <div class="fundamentals-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-top: 0.5rem;">
+                <!-- Margins Section -->
+                <div class="fundamental-group card-inner" style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; padding: 1rem;">
+                  <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-accent); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">📊 Profitability Margins</h3>
+                  <div class="margin-item" style="margin-bottom: 0.75rem;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 2px;">
+                      <span class="text-muted">Gross Margin</span>
+                      <span id="fund-gross-margin" class="font-bold">N/A</span>
+                    </div>
+                    <div class="progress-bar-bg" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                      <div id="fund-gross-margin-bar" class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.6s ease;"></div>
+                    </div>
+                  </div>
+                  <div class="margin-item" style="margin-bottom: 0.75rem;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 2px;">
+                      <span class="text-muted">Operating Margin</span>
+                      <span id="fund-operating-margin" class="font-bold">N/A</span>
+                    </div>
+                    <div class="progress-bar-bg" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                      <div id="fund-operating-margin-bar" class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-positive); transition: width 0.6s ease;"></div>
+                    </div>
+                  </div>
+                  <div class="margin-item">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom: 2px;">
+                      <span class="text-muted">Net Margin</span>
+                      <span id="fund-net-margin" class="font-bold">N/A</span>
+                    </div>
+                    <div class="progress-bar-bg" style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                      <div id="fund-net-margin-bar" class="progress-bar-fill" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.6s ease;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Management Efficiency -->
+                <div class="fundamental-group card-inner" style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-accent); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">📈 Management Efficiency</h3>
+                    <div class="efficiency-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                      <span style="font-size:0.8rem;" class="text-muted">Return on Equity (ROE)</span>
+                      <span id="fund-roe" class="badge badge-neutral" style="font-size: 0.8rem; font-weight: bold;">N/A</span>
+                    </div>
+                    <div class="efficiency-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0;">
+                      <span style="font-size:0.8rem;" class="text-muted">Return on Assets (ROA)</span>
+                      <span id="fund-roa" class="badge badge-neutral" style="font-size: 0.8rem; font-weight: bold;">N/A</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Financial Health -->
+                <div class="fundamental-group card-inner" style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--color-accent); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.25rem;">🛡️ Solvency & Cash Flow</h3>
+                    <div class="efficiency-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                      <span style="font-size:0.8rem;" class="text-muted">Debt to Equity Ratio</span>
+                      <span id="fund-debt-equity" class="badge badge-neutral" style="font-size: 0.8rem; font-weight: bold;">N/A</span>
+                    </div>
+                    <div class="efficiency-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0;">
+                      <span style="font-size:0.8rem;" class="text-muted">Free Cash Flow (FCF)</span>
+                      <span id="fund-fcf" class="font-bold text-accent" style="font-size: 0.85rem;">N/A</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -772,92 +848,144 @@
                 <button type="submit" class="btn-buy" style="height:34px; padding:0 0.85rem; font-size:0.85rem;">Send</button>
               </form>
             </div>
-
           </aside>
-
         </div>
-
       </section>
 
       <!-- PAGE 5: ECONOMIC MOAT CHECKLIST -->
       <section id="mote-page" class="page-section hidden">
         
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
-            <div>
-              <h2 class="card-title" style="margin-bottom:0.25rem;">Economic Moat Rating Analysis</h2>
-              <p class="text-muted" style="font-size:0.85rem;">Evaluate competitive advantages and barriers to entry for <span id="mote-active-symbol" class="font-bold text-accent">RELIANCE.NS</span>.</p>
-            </div>
-            <div class="mote-stars-container">
-              <div class="mote-stars" id="mote-stars-display">☆☆☆☆☆</div>
-              <div id="mote-score-badge" class="badge badge-neutral" style="font-size:0.8rem; margin-top:0.25rem;">0.0 / 5.0 Mote</div>
+        <div class="analyzer-grid">
+          
+          <!-- Left Column: Moat checklist and scoring -->
+          <div class="analyzer-main-panel">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem;">
+                <div>
+                  <h2 class="card-title" style="margin-bottom:0.25rem;">Economic Moat checklist analysis</h2>
+                  <p class="text-muted" style="font-size:0.85rem;">Evaluate competitive advantages and barriers to entry for <span id="mote-active-symbol" class="font-bold text-accent">RELIANCE.NS</span>.</p>
+                </div>
+                <div class="mote-stars-container" style="text-align: right;">
+                  <div class="mote-stars" id="mote-stars-display" style="font-size: 1.4rem; color: #eab308; letter-spacing: 2px;">☆☆☆☆☆</div>
+                  <div id="mote-score-badge" class="badge badge-neutral" style="font-size:0.8rem; margin-top:0.25rem;">0.0 / 5.0 Mote</div>
+                </div>
+              </div>
+
+              <!-- Moat questions list -->
+              <div class="mote-checklist" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                
+                <label class="mote-item card" style="display:flex; flex-direction:row; gap:1rem; cursor:pointer; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); margin:0;">
+                  <div class="mote-item-checkbox" style="display:flex; align-items:center;">
+                    <input type="checkbox" id="mote-q-brand" class="mote-checkbox">
+                  </div>
+                  <div class="mote-item-content">
+                    <div class="mote-item-title" style="font-weight:bold; font-size:0.9rem;">1. Brand pricing power</div>
+                    <div class="mote-item-desc text-muted" style="font-size:0.75rem; margin-top:2px;">Does the company possess a strong brand name that allows it to charge higher prices than competitors without losing market share? (e.g. Apple, Coca-Cola)</div>
+                  </div>
+                </label>
+
+                <label class="mote-item card" style="display:flex; flex-direction:row; gap:1rem; cursor:pointer; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); margin:0;">
+                  <div class="mote-item-checkbox" style="display:flex; align-items:center;">
+                    <input type="checkbox" id="mote-q-switching" class="mote-checkbox">
+                  </div>
+                  <div class="mote-item-content">
+                    <div class="mote-item-title" style="font-weight:bold; font-size:0.9rem;">2. High switching costs</div>
+                    <div class="mote-item-desc text-muted" style="font-size:0.75rem; margin-top:2px;">Is it expensive, complicated, or highly disruptive for customers to switch from the company's product to a competitor's product? (e.g. Oracle database, enterprise software)</div>
+                  </div>
+                </label>
+
+                <label class="mote-item card" style="display:flex; flex-direction:row; gap:1rem; cursor:pointer; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); margin:0;">
+                  <div class="mote-item-checkbox" style="display:flex; align-items:center;">
+                    <input type="checkbox" id="mote-q-network" class="mote-checkbox">
+                  </div>
+                  <div class="mote-item-content">
+                    <div class="mote-item-title" style="font-weight:bold; font-size:0.9rem;">3. Network effects</div>
+                    <div class="mote-item-desc text-muted" style="font-size:0.75rem; margin-top:2px;">Does the product or service become more valuable to existing users as more new users adopt it? (e.g. Visa card network, Microsoft Office file sharing)</div>
+                  </div>
+                </label>
+
+                <label class="mote-item card" style="display:flex; flex-direction:row; gap:1rem; cursor:pointer; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); margin:0;">
+                  <div class="mote-item-checkbox" style="display:flex; align-items:center;">
+                    <input type="checkbox" id="mote-q-cost" class="mote-checkbox">
+                  </div>
+                  <div class="mote-item-content">
+                    <div class="mote-item-title" style="font-weight:bold; font-size:0.9rem;">4. Cost advantage</div>
+                    <div class="mote-item-desc text-muted" style="font-size:0.75rem; margin-top:2px;">Can the company produce its goods or services at a significantly lower cost than competitors due to scale, access to raw materials, or process secrets? (e.g. Walmart, D-Mart)</div>
+                  </div>
+                </label>
+
+                <label class="mote-item card" style="display:flex; flex-direction:row; gap:1rem; cursor:pointer; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03); margin:0;">
+                  <div class="mote-item-checkbox" style="display:flex; align-items:center;">
+                    <input type="checkbox" id="mote-q-barriers" class="mote-checkbox">
+                  </div>
+                  <div class="mote-item-content">
+                    <div class="mote-item-title" style="font-weight:bold; font-size:0.9rem;">5. Regulatory or high entry barriers</div>
+                    <div class="mote-item-desc text-muted" style="font-size:0.75rem; margin-top:2px;">Are there massive regulatory hurdles, government licenses, patents, or capital requirements that prevent new competitors from entering? (e.g. Telecom licences, pharma patents)</div>
+                  </div>
+                </label>
+
+              </div>
+
+              <!-- Notes and Cloud Save -->
+              <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                  <label for="mote-notes" class="font-bold" style="font-size:0.9rem;">Qualitative Mote Analysis Notes</label>
+                  <textarea id="mote-notes" rows="4" class="custom-input" placeholder="Type your competitive advantage analysis notes here..." style="width:100%; border-radius:12px; resize:vertical; padding:0.75rem; background:rgba(255,255,255,0.02);"></textarea>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                  <button id="btn-save-mote" class="btn-premium">
+                    💾 Save Mote Report
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Moat questions list -->
-          <div class="mote-checklist">
-            
-            <label class="mote-item card">
-              <div class="mote-item-checkbox">
-                <input type="checkbox" id="mote-q-brand" class="mote-checkbox">
+          <!-- Right Column: Interactive educational castle diagram -->
+          <div class="analyzer-side-panel">
+            <div class="card castle-explainer-card" style="background: linear-gradient(135deg, rgba(18, 32, 51, 0.7), rgba(10, 15, 30, 0.9)); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 1.25rem;">
+              <h2 class="card-title" style="color: var(--color-accent); display: flex; align-items: center; gap: 0.5rem; font-size:1.1rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.75rem; margin-bottom: 1rem;">🏰 Economic Moat Explainer</h2>
+              
+              <!-- CSS animated Castle and Moat drawing -->
+              <div class="castle-moat-visual" style="height: 120px; margin: 1rem 0; display: flex; justify-content: center; align-items: flex-end; position: relative; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 5px; overflow: hidden;">
+                <div class="visual-moat" style="position: absolute; bottom: 0; left: 0; right: 0; height: 18px; background: linear-gradient(180deg, #1d4ed8, #1e3a8a); border-radius: 4px; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); animation: waterRipple 3s infinite ease-in-out;"></div>
+                <div class="visual-castle" style="font-size: 3.5rem; z-index: 2; filter: drop-shadow(0 0 8px rgba(0, 245, 160, 0.4)); transform-origin: bottom; animation: castlePulse 4s infinite ease-in-out; margin-bottom: 5px;">🏰</div>
+                <div class="visual-competitors" style="position: absolute; bottom: 5px; left: 10px; font-size: 1.4rem; z-index: 3; animation: competitorAttack 6s infinite linear;">⚔️</div>
               </div>
-              <div class="mote-item-content">
-                <div class="mote-item-title">1. Brand pricing power</div>
-                <div class="mote-item-desc text-muted">Does the company possess a strong brand name that allows it to charge higher prices than competitors without losing market share? (e.g. Apple, Coca-Cola)</div>
-              </div>
-            </label>
 
-            <label class="mote-item card">
-              <div class="mote-item-checkbox">
-                <input type="checkbox" id="mote-q-switching" class="mote-checkbox">
+              <div class="explainer-content" style="font-size: 0.82rem; line-height: 1.6; color: var(--color-text-secondary);">
+                <p style="margin-bottom: 1rem;">
+                  Popularized by <strong>Warren Buffett</strong>, an <strong>Economic Moat</strong> represents a business's capacity to maintain its competitive advantages over rivals in order to protect its long-term profits and market share.
+                </p>
+                <div class="moat-types-list" style="display:flex; flex-direction:column; gap:0.6rem;">
+                  <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <span style="font-size:1rem; color:#00f5a0; margin-top:2px;">🛡️</span>
+                    <div><strong>Brand Power</strong>: High consumer loyalty allows pricing power, enabling higher margins than competitors (e.g. Apple, Titan).</div>
+                  </div>
+                  <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <span style="font-size:1rem; color:#00f5a0; margin-top:2px;">🛡️</span>
+                    <div><strong>Switching Costs</strong>: Significant time, money, or effort required for customers to change products (e.g. Oracle, TCS).</div>
+                  </div>
+                  <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <span style="font-size:1rem; color:#00f5a0; margin-top:2px;">🛡️</span>
+                    <div><strong>Network Effects</strong>: The value of the product scales exponentially as more users join the network (e.g. UPI, Indiamart).</div>
+                  </div>
+                  <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <span style="font-size:1rem; color:#00f5a0; margin-top:2px;">🛡️</span>
+                    <div><strong>Cost Advantage</strong>: Structural efficiencies (scale, process proprietary methods) allow lower production costs (e.g. DMart).</div>
+                  </div>
+                  <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <span style="font-size:1rem; color:#00f5a0; margin-top:2px;">🛡️</span>
+                    <div><strong>High Barriers</strong>: Licenses, capital requirements, or patents that block new competition (e.g. CDSL, HAL).</div>
+                  </div>
+                </div>
               </div>
-              <div class="mote-item-content">
-                <div class="mote-item-title">2. High switching costs</div>
-                <div class="mote-item-desc text-muted">Is it expensive, complicated, or highly disruptive for customers to switch from the company's product to a competitor's product? (e.g. Oracle database, enterprise software)</div>
-              </div>
-            </label>
-
-            <label class="mote-item card">
-              <div class="mote-item-checkbox">
-                <input type="checkbox" id="mote-q-network" class="mote-checkbox">
-              </div>
-              <div class="mote-item-content">
-                <div class="mote-item-title">3. Network effects</div>
-                <div class="mote-item-desc text-muted">Does the product or service become more valuable to existing users as more new users adopt it? (e.g. Visa card network, Microsoft Office file sharing)</div>
-              </div>
-            </label>
-
-            <label class="mote-item card">
-              <div class="mote-item-checkbox">
-                <input type="checkbox" id="mote-q-cost" class="mote-checkbox">
-              </div>
-              <div class="mote-item-content">
-                <div class="mote-item-title">4. Cost advantage</div>
-                <div class="mote-item-desc text-muted">Can the company produce its goods or services at a significantly lower cost than competitors due to scale, access to raw materials, or process secrets? (e.g. Walmart, D-Mart)</div>
-              </div>
-            </label>
-
-            <label class="mote-item card">
-              <div class="mote-item-checkbox">
-                <input type="checkbox" id="mote-q-barriers" class="mote-checkbox">
-              </div>
-              <div class="mote-item-content">
-                <div class="mote-item-title">5. Regulatory or high entry barriers</div>
-                <div class="mote-item-desc text-muted">Are there massive regulatory hurdles, government licenses, patents, or capital requirements that prevent new competitors from entering? (e.g. Telecom licences, pharma patents)</div>
-              </div>
-            </label>
-
+            </div>
           </div>
 
-          <!-- Notes and Cloud Save -->
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-            <div class="form-group">
-              <label for="mote-notes" class="font-bold">Qualitative Mote Analysis Notes</label>
-              <textarea id="mote-notes" rows="4" class="custom-input" placeholder="Type your competitive advantage analysis notes here..." style="width:100%; border-radius:12px; resize:vertical; padding:0.75rem; background:rgba(255,255,255,0.02);"></textarea>
-            </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-              <button id="btn-save-mote" class="btn-premium">
+        </div>
+      </section>remium">
                 💾 Save Mote Report
               </button>
             </div>

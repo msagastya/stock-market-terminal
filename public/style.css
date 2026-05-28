@@ -1830,4 +1830,137 @@ table.portfolio-table tr:hover td {
   border-color: rgba(255, 0, 85, 0.25);
 }
 
+/* --- PREMIUM CHART TYPE TOGGLE & ANIME STATES --- */
+.chart-type-btn {
+  background: none;
+  border: none;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+}
+
+.chart-type-btn.active {
+  background: rgba(0, 245, 160, 0.1) !important;
+  border: 1px solid rgba(0, 245, 160, 0.25) !important;
+  color: #00f5a0 !important;
+  box-shadow: 0 0 8px rgba(0, 245, 160, 0.15);
+}
+
+.chart-type-btn:hover:not(.active) {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* --- MOAT BADGES & EDUCATION VISUALIZERS --- */
+.badge-moat {
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.badge-moat:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.badge-moat.badge-positive {
+  color: #00f5a0;
+  border-color: rgba(0, 245, 160, 0.25);
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.15), rgba(0, 245, 160, 0.03));
+}
+
+.badge-moat.badge-neutral {
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.25);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.03));
+}
+
+.badge-moat.badge-negative {
+  color: #ff0055;
+  border-color: rgba(255, 0, 85, 0.25);
+  background: linear-gradient(135deg, rgba(255, 0, 85, 0.15), rgba(255, 0, 85, 0.03));
+}
+
+/* Castle & Moat Animation Loops */
+@keyframes waterRipple {
+  0%, 100% {
+    transform: scaleY(1);
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    transform: scaleY(1.08);
+    filter: brightness(1.2) saturate(1.1);
+  }
+}
+
+@keyframes castlePulse {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.04) translateY(-3px);
+  }
+}
+
+@keyframes competitorAttack {
+  0% {
+    left: -15px;
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  42% {
+    left: calc(50% - 30px);
+    transform: translateY(-8px) rotate(-15deg);
+  }
+  46% {
+    left: calc(50% - 22px);
+    transform: translateY(0) rotate(15deg);
+    filter: drop-shadow(0 0 6px #ff0055);
+  }
+  50% {
+    left: calc(50% - 30px);
+    transform: translateY(-4px) rotate(-10deg);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+    transform: translateY(0) rotate(360deg);
+  }
+}
+
+.castle-moat-visual .visual-moat {
+  animation: waterRipple 3.5s infinite ease-in-out;
+}
+
+.castle-moat-visual .visual-castle {
+  animation: castlePulse 5s infinite ease-in-out;
+}
+
+.castle-moat-visual .visual-competitors {
+  animation: competitorAttack 7s infinite linear;
+}
+
+/* Progress indicator bars inside cards */
+.progress-bar-fill {
+  box-shadow: 0 0 10px rgba(0, 245, 160, 0.2);
+  border-radius: 3px;
+}
+
 
