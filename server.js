@@ -8,17 +8,27 @@ const kiteService = require('./kite-service');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Yahoo Finance client with suppressed notices and validation checks
+// Initialize Yahoo Finance client with suppressed notices and validation logging disabled
 const yahooFinance = new YahooFinance({
-  suppressNotices: ['yahooSurvey', 'ripHistorical']
-});
-
-yahooFinance.setGlobalConfig({
+  suppressNotices: ['yahooSurvey', 'ripHistorical'],
   validation: {
     logErrors: false,
-    throwValidationErrors: false
+    logOptionsErrors: false,
+    allowAdditionalProps: true
   }
 });
+
+// Helper to bypass strict validation throws and extract the parsed result on schema mismatches
+async function safeYF(promise) {
+  try {
+    return await promise;
+  } catch (err) {
+    if (err.name === 'FailedYahooValidationError' && err.result) {
+      return err.result;
+    }
+    throw err;
+  }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -235,7 +245,7 @@ async function refreshMarketCache() {
     
     // 1. Fetch indices quotes
     const indexSymbols = ['^NSEI', '^BSESN', '^NSEBANK'];
-    const indexQuotes = await yahooFinance.quote(indexSymbols);
+    const indexQuotes = await safeYF(yahooFinance.quote(indexSymbols));
     
     // Fetch 1D chart points for indices sparklines
     const indexData = {};
@@ -245,11 +255,11 @@ async function refreshMarketCache() {
         const start = new Date();
         start.setDate(today.getDate() - 4); // 4 days ago to handle weekends
         
-        const chart = await yahooFinance.chart(sym, {
+        const chart = await safeYF(yahooFinance.chart(sym, {
           period1: start.toISOString().split('T')[0],
           period2: today.toISOString().split('T')[0],
           interval: '15m'
-        });
+        }));
 
         const points = (chart.quotes || [])
           .filter(q => typeof q.close === 'number')
@@ -279,7 +289,7 @@ async function refreshMarketCache() {
     for (let i = 0; i < nseTickers.length; i += chunkSize) {
       const chunk = nseTickers.slice(i, i + chunkSize);
       try {
-        const q = await yahooFinance.quote(chunk);
+        const q = await safeYF(yahooFinance.quote(chunk));
         quotes.push(...q);
       } catch (err) {
         console.warn(`Chunk fetch failed:`, err.message);
@@ -406,7 +416,7 @@ app.get('/api/search', async (req, res) => {
     }));
 
     // B. Search Yahoo Finance for Stocks
-    const result = await yahooFinance.search(query);
+    const result = await safeYF(yahooFinance.search(query));
     const formattedQuotes = (result.quotes || [])
       .filter(q => {
         if (!q || !q.symbol || typeof q.symbol !== 'string') return false;
@@ -478,16 +488,16 @@ app.get('/api/quote/:symbol', async (req, res) => {
       return res.json(cached.data);
     }
 
-    const quote = await yahooFinance.quote(symbol);
+    const quote = await safeYF(yahooFinance.quote(symbol));
     if (!quote) {
       return res.status(404).json({ error: 'Stock symbol not found' });
     }
 
     let profile = {};
     try {
-      const summary = await yahooFinance.quoteSummary(symbol, {
+      const summary = await safeYF(yahooFinance.quoteSummary(symbol, {
         modules: ['assetProfile', 'summaryDetail', 'financialData']
-      });
+      }));
       if (summary) {
         profile = {
           sector: summary.assetProfile?.sector || getLocalSector(symbol),
@@ -549,7 +559,7 @@ app.get('/api/chart/:symbol', async (req, res) => {
     if (mf) {
       try {
         // Try searching Yahoo Finance for a matching mutual fund scheme ticker to get historical chart
-        const searchResult = await yahooFinance.search(mf.schemeName);
+        const searchResult = await safeYF(yahooFinance.search(mf.schemeName));
         const match = (searchResult.quotes || []).find(q => q.quoteType === 'MUTUALFUND' || q.quoteType === 'ETF');
         if (match && match.symbol) {
           symbol = match.symbol; // Re-route to standard Yahoo symbol
@@ -587,7 +597,7 @@ app.get('/api/chart/:symbol', async (req, res) => {
   // B. Standard Yahoo Finance chart retrieval
   try {
     const { period1, period2, interval } = getPeriodDates(range);
-    const result = await yahooFinance.chart(symbol, { period1, period2, interval });
+    const result = await safeYF(yahooFinance.chart(symbol, { period1, period2, interval }));
 
     if (!result || !result.quotes || result.quotes.length === 0) {
       return res.status(404).json({ error: 'No chart data available for this range' });
@@ -645,11 +655,11 @@ app.get('/api/analysis/:symbol', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(today.getDate() - 250);
     
-    const chartData = await yahooFinance.chart(symbol, {
+    const chartData = await safeYF(yahooFinance.chart(symbol, {
       period1: startDate.toISOString().split('T')[0],
       period2: today.toISOString().split('T')[0],
       interval: '1d'
-    });
+    }));
 
     if (!chartData || !chartData.quotes || chartData.quotes.length < 20) {
       return res.status(400).json({ error: 'Not enough historical data points for technical analysis' });
@@ -824,7 +834,7 @@ app.get('/api/news/:symbol', async (req, res) => {
   }
 
   try {
-    const result = await yahooFinance.search(query);
+    const result = await safeYF(yahooFinance.search(query));
     const positiveWords = ['grow', 'profit', 'surges', 'jump', 'rise', 'buy', 'bull', 'gain', 'positive', 'expansion', 'up', 'high', 'deal', 'agreement', 'beating', 'strong'];
     const negativeWords = ['fall', 'drop', 'slump', 'loss', 'sell', 'bear', 'crash', 'negative', 'decline', 'down', 'low', 'deficit', 'debt', 'risk', 'fail', 'weak', 'plunge'];
 
@@ -909,7 +919,7 @@ app.post('/api/live-quotes', async (req, res) => {
     // 1. Fetch stocks from Yahoo Finance in parallel
     if (stockSymbols.length > 0) {
       try {
-        const quotes = await yahooFinance.quote(stockSymbols);
+        const quotes = await safeYF(yahooFinance.quote(stockSymbols));
         const quotesArr = Array.isArray(quotes) ? quotes : [quotes];
         quotesArr.forEach(q => {
           if (q) {
