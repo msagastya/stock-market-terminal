@@ -2570,8 +2570,11 @@ async function init() {
   setupNavigation();
   setupListeners();
   
-  // Show backend URL configuration alert if hosted on GitHub Pages without configured API server
-  if (window.location.hostname.includes('github.io') && !localStorage.getItem('BACKEND_API_URL')) {
+  // Show backend URL configuration alert if hosted on GitHub Pages or Firebase Hosting without configured API server
+  const isHosted = window.location.hostname.includes('github.io') || 
+                   window.location.hostname.includes('web.app') || 
+                   window.location.hostname.includes('firebaseapp.com');
+  if (isHosted && !localStorage.getItem('BACKEND_API_URL')) {
     showGithubPagesBackendAlert();
   }
   
