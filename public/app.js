@@ -2512,12 +2512,68 @@ function setupKiteTerminalListeners() {
   }
 }
 
+function showGithubPagesBackendAlert() {
+  const alertDiv = document.createElement('div');
+  alertDiv.id = 'github-backend-alert';
+  alertDiv.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 1rem;
+    z-index: 100000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-family: inherit;
+  `;
+  alertDiv.innerHTML = `
+    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
+      <span>⚠️</span>
+      <span><strong>AuraStock hosted on GitHub Pages:</strong> You need to connect your local Node.js backend server.</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem;">
+      <input type="url" id="alert-backend-url" placeholder="e.g. http://localhost:3000" class="custom-input" style="padding:0.4rem 0.8rem; font-size:0.85rem; width:220px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; margin:0;">
+      <button id="btn-alert-connect" class="btn-premium" style="padding:0.4rem 1rem; font-size:0.85rem; border-radius:6px; height:auto; margin:0;">Connect</button>
+    </div>
+  `;
+  document.body.appendChild(alertDiv);
+  
+  const input = alertDiv.querySelector('#alert-backend-url');
+  const btn = alertDiv.querySelector('#btn-alert-connect');
+  
+  btn.addEventListener('click', () => {
+    const url = input.value.trim();
+    if (url) {
+      localStorage.setItem('BACKEND_API_URL', url);
+      api.setApiBase(url);
+      alertDiv.remove();
+      alert('Backend server URL updated! Re-initializing database...');
+      window.location.reload();
+    } else {
+      alert('Please enter a valid URL (e.g. http://localhost:3000)');
+    }
+  });
+}
+
 // -------------------------------------------------------------
 // APP INITIALIZATION
 // -------------------------------------------------------------
 async function init() {
   setupNavigation();
   setupListeners();
+  
+  // Show backend URL configuration alert if hosted on GitHub Pages without configured API server
+  if (window.location.hostname.includes('github.io') && !localStorage.getItem('BACKEND_API_URL')) {
+    showGithubPagesBackendAlert();
+  }
   
   // 1. Initial Load of Screener Data Cache
   await loadScreenerData();
