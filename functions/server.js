@@ -863,23 +863,43 @@ app.get('/api/news/:symbol', async (req, res) => {
 
 // --- NEW ENDPOINTS FOR INSTITUTIONAL UPGRADE ---
 
-// 6. Fetch live market indices (Nifty, Sensex, Bank Nifty)
-app.get('/api/indices', (req, res) => {
-  if (Object.keys(cache.indices).length === 0) {
-    return res.status(503).json({ error: 'Market indices cache is warming up. Please try again shortly.' });
+// Helper to ensure cache is fresh for serverless function environments
+async function ensureCacheIsFresh() {
+  const cacheAge = cache.lastUpdated ? (Date.now() - cache.lastUpdated.getTime()) : Infinity;
+  // If cache is older than 45 seconds or empty, trigger refresh on-demand
+  if (cacheAge > 45000 || cache.screener.length === 0) {
+    console.log('Screener cache expired or empty. Refreshing on-demand...');
+    await refreshMarketCache();
   }
-  res.json(cache.indices);
+}
+
+// 6. Fetch live market indices (Nifty, Sensex, Bank Nifty)
+app.get('/api/indices', async (req, res) => {
+  try {
+    await ensureCacheIsFresh();
+    if (Object.keys(cache.indices).length === 0) {
+      return res.status(503).json({ error: 'Market indices cache is warming up. Please try again shortly.' });
+    }
+    res.json(cache.indices);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to refresh indices: ' + err.message });
+  }
 });
 
 // 7. Fetch cached stock screener list
-app.get('/api/screener', (req, res) => {
-  if (cache.screener.length === 0) {
-    return res.status(503).json({ error: 'Screener cache is warming up. Please try again shortly.' });
+app.get('/api/screener', async (req, res) => {
+  try {
+    await ensureCacheIsFresh();
+    if (cache.screener.length === 0) {
+      return res.status(503).json({ error: 'Screener cache is warming up. Please try again shortly.' });
+    }
+    res.json({
+      lastUpdated: cache.lastUpdated,
+      stocks: cache.screener
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to refresh screener: ' + err.message });
   }
-  res.json({
-    lastUpdated: cache.lastUpdated,
-    stocks: cache.screener
-  });
 });
 
 // 7b. High Frequency Live Tickers Sync Endpoint
@@ -1190,10 +1210,14 @@ app.delete('/api/kite/gtt/:id', async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  // Run initial cache refresh on startup
-  await refreshMarketCache();
-  // Set background polling interval (every 30 seconds)
-  setInterval(refreshMarketCache, 30000);
-});
+if (require.main === module || !process.env.FUNCTION_SIGNATURE_TYPE) {
+  app.listen(PORT, async () => {
+    console.log(`Server running on port ${PORT}`);
+    // Run initial cache refresh on startup
+    await refreshMarketCache();
+    // Set background polling interval (every 30 seconds)
+    setInterval(refreshMarketCache, 30000);
+  });
+}
+
+module.exports = app;
