@@ -10,7 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 // Initialize Yahoo Finance client with suppressed notices and validation checks
 const yahooFinance = new YahooFinance({
-  suppressNotices: ['yahooSurvey', 'ripHistorical'],
+  suppressNotices: ['yahooSurvey', 'ripHistorical']
+});
+
+yahooFinance.setGlobalConfig({
   validation: {
     logErrors: false,
     throwValidationErrors: false
