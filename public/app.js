@@ -1772,8 +1772,11 @@ function setupListeners() {
   // Settings API submit
   elements.settingsApiForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const url = elements.settingsApiUrl.value.trim();
+    let url = elements.settingsApiUrl.value.trim();
     if (url) {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://' + url;
+      }
       localStorage.setItem('BACKEND_API_URL', url);
       api.setApiBase(url);
       alert('API Server URL updated successfully! Refresh page to apply.');
@@ -2550,8 +2553,11 @@ function showGithubPagesBackendAlert() {
   const btn = alertDiv.querySelector('#btn-alert-connect');
   
   btn.addEventListener('click', () => {
-    const url = input.value.trim();
+    let url = input.value.trim();
     if (url) {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://' + url;
+      }
       localStorage.setItem('BACKEND_API_URL', url);
       api.setApiBase(url);
       alertDiv.remove();
