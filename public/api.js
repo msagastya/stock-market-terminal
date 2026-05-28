@@ -1,6 +1,16 @@
-// api.js - Frontend Client Wrapper for Stock Analyzer REST API
+export let API_BASE = '/api';
 
-const API_BASE = '/api';
+export function setApiBase(url) {
+  if (url) {
+    const cleaned = url.endsWith('/') ? url.slice(0, -1) : url;
+    API_BASE = `${cleaned}/api`;
+  } else {
+    API_BASE = '/api';
+  }
+}
+
+// Auto-initialize from localStorage if set
+setApiBase(localStorage.getItem('BACKEND_API_URL'));
 
 export async function searchSymbols(query) {
   const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);

@@ -192,6 +192,8 @@ const elements = {
   fbProjectId: document.getElementById('fb-projectId'),
   fbStorageBucket: document.getElementById('fb-storageBucket'),
   fbAppId: document.getElementById('fb-appId'),
+  settingsApiForm: document.getElementById('settings-api-form'),
+  settingsApiUrl: document.getElementById('settings-api-url'),
 
   // Utilities
   loadingOverlay: document.getElementById('loading-overlay'),
@@ -1767,6 +1769,21 @@ function setupListeners() {
     disconnectFirebase();
   });
 
+  // Settings API submit
+  elements.settingsApiForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const url = elements.settingsApiUrl.value.trim();
+    if (url) {
+      localStorage.setItem('BACKEND_API_URL', url);
+      api.setApiBase(url);
+      alert('API Server URL updated successfully! Refresh page to apply.');
+    } else {
+      localStorage.removeItem('BACKEND_API_URL');
+      api.setApiBase('');
+      alert('API Server URL reset to default. Refresh page to apply.');
+    }
+  });
+
   setupKiteTerminalListeners();
 }
 
@@ -2521,6 +2538,9 @@ async function init() {
     state.firebaseConnected = false;
     updateSyncStatusUI();
   }
+
+  // Populate Backend Server URL configuration
+  elements.settingsApiUrl.value = localStorage.getItem('BACKEND_API_URL') || '';
 
   // 3. Load default active stock (Reliance Industries)
   await loadStock(state.currentSymbol);

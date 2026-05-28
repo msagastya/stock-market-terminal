@@ -1144,6 +1144,22 @@
       <!-- PAGE 7: CLOUD SYNC SETTINGS -->
       <section id="settings-page" class="page-section hidden">
         
+        <div class="card" style="max-width: 600px; margin-inline: auto; margin-bottom: 2rem;">
+          <h2 class="card-title">Backend API Settings</h2>
+          <p class="text-muted" style="font-size:0.9rem; margin-bottom: 1.5rem;">
+            Configure the URL of your Node.js backend server. If hosted on GitHub Pages, you can point this to your local server (e.g. <code>http://localhost:3000</code>) or a live deployed instance. Leave empty to use relative paths.
+          </p>
+          <form id="settings-api-form" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group">
+              <label>Backend Server URL</label>
+              <input type="url" id="settings-api-url" placeholder="e.g. http://localhost:3000" class="custom-input">
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button type="submit" class="btn-premium">Save Server URL</button>
+            </div>
+          </form>
+        </div>
+
         <div class="card" style="max-width: 600px; margin-inline: auto;">
           <h2 class="card-title">Firebase Cloud Sync Settings</h2>
           
