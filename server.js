@@ -1235,6 +1235,34 @@ app.listen(PORT, async () => {
     console.log(`- Network Device: http://${ip}:${PORT} (Use this to connect from your phone or tablet on the same Wi-Fi)`);
   });
   console.log(`==================================================`);
+
+  // Start secure tunnel if requested
+  if (process.env.SHARE_TUNNEL === 'true' || process.argv.includes('--share')) {
+    try {
+      console.log('📡 Starting secure public tunnel via Localtunnel...');
+      const localtunnel = require('localtunnel');
+      const tunnel = await localtunnel({ port: PORT });
+      console.log(`📡 Secure Tunnel Active: ${tunnel.url}`);
+
+      // Publish URL to free KV store
+      try {
+        await fetch('https://kvdb.io/stock_market_terminal_msagastya/backend_url', {
+          method: 'PUT',
+          body: tunnel.url
+        });
+        console.log(`🚀 Automatically published tunnel URL to KV store.`);
+      } catch (kvErr) {
+        console.error('⚠️ Failed to publish tunnel URL to KV store:', kvErr.message);
+      }
+
+      tunnel.on('close', () => {
+        console.log('📡 Secure tunnel closed.');
+      });
+    } catch (err) {
+      console.error('⚠️ Failed to start localtunnel:', err.message);
+    }
+  }
+
   // Run initial cache refresh on startup
   await refreshMarketCache();
   // Set background polling interval (every 30 seconds)

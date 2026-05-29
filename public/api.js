@@ -9,8 +9,40 @@ export function setApiBase(url) {
   }
 }
 
-// Auto-initialize from localStorage if set
-setApiBase(localStorage.getItem('BACKEND_API_URL'));
+// Auto-resolve backend base URL dynamically
+async function autoResolveBackendUrl() {
+  const savedUrl = localStorage.getItem('BACKEND_API_URL');
+  if (savedUrl) {
+    setApiBase(savedUrl);
+    return;
+  }
+
+  const hostname = window.location.hostname;
+  const isLocal = ['localhost', '127.0.0.1'].includes(hostname) || 
+                  hostname.startsWith('192.168.') || 
+                  hostname.startsWith('10.') || 
+                  hostname.startsWith('198.19.');
+
+  // If running online (e.g. Firebase Hosting), query our KV store for the active Mac tunnel URL
+  if (!isLocal) {
+    try {
+      console.log('🌐 Remote origin detected. Querying active Mac tunnel URL...');
+      const res = await fetch('https://kvdb.io/stock_market_terminal_msagastya/backend_url');
+      if (res.ok) {
+        const tunnelUrl = (await res.text()).trim();
+        if (tunnelUrl && tunnelUrl.startsWith('http')) {
+          setApiBase(tunnelUrl);
+          console.log(`🌐 Connected to Mac backend tunnel: ${tunnelUrl}`);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to auto-resolve remote backend tunnel:', e);
+    }
+  }
+}
+
+// Execute immediately
+autoResolveBackendUrl();
 
 export async function searchSymbols(query) {
   const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);

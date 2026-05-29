@@ -69,6 +69,7 @@ function parseMarkdown(text) {
 
 // Initialize Chart Manager
 const chartManager = new ChartManager('stock-chart');
+const mfChartManager = new ChartManager('mf-stock-chart');
 
 // DOM Elements Reference Map
 const elements = {
@@ -291,7 +292,57 @@ const elements = {
   fundRoe: document.getElementById('fund-roe'),
   fundRoa: document.getElementById('fund-roa'),
   fundDebtEquity: document.getElementById('fund-debt-equity'),
-  fundFcf: document.getElementById('fund-fcf')
+  fundFcf: document.getElementById('fund-fcf'),
+
+  // Mutual Fund Elements
+  mfDetailsCard: document.getElementById('mf-details-card'),
+  mfHoldingsCard: document.getElementById('mf-holdings-card'),
+  mfComparisonCard: document.getElementById('mf-comparison-card'),
+  sipCalculatorCard: document.getElementById('sip-calculator-card'),
+  mfBadgeCategory: document.getElementById('mf-badge-category'),
+  mfValAmc: document.getElementById('mf-val-amc'),
+  mfValType: document.getElementById('mf-val-type'),
+  mfValCode: document.getElementById('mf-val-code'),
+  mfPerf1m: document.getElementById('mf-perf-1m'),
+  mfPerf6m: document.getElementById('mf-perf-6m'),
+  mfPerf1y: document.getElementById('mf-perf-1y'),
+  mfPerf5y: document.getElementById('mf-perf-5y'),
+  mfMixEquityVal: document.getElementById('mf-mix-equity-val'),
+  mfMixEquityBar: document.getElementById('mf-mix-equity-bar'),
+  mfMixDebtVal: document.getElementById('mf-mix-debt-val'),
+  mfMixDebtBar: document.getElementById('mf-mix-debt-bar'),
+  mfMixCashVal: document.getElementById('mf-mix-cash-val'),
+  mfMixCashBar: document.getElementById('mf-mix-cash-bar'),
+  mfHoldingsList: document.getElementById('mf-holdings-list'),
+  mfComparisonTbody: document.getElementById('mf-comparison-tbody'),
+  sipMonthlySlider: document.getElementById('sip-monthly-slider'),
+  sipMonthlyVal: document.getElementById('sip-monthly-val'),
+  sipRateSlider: document.getElementById('sip-rate-slider'),
+  sipRateVal: document.getElementById('sip-rate-val'),
+  sipYearsSlider: document.getElementById('sip-years-slider'),
+  sipYearsVal: document.getElementById('sip-years-val'),
+  sipInvestedDisplay: document.getElementById('sip-invested-display'),
+  sipReturnsDisplay: document.getElementById('sip-returns-display'),
+  sipTotalDisplay: document.getElementById('sip-total-display'),
+  sipBarInvested: document.getElementById('sip-bar-invested'),
+  sipBarReturns: document.getElementById('sip-bar-returns'),
+
+  // Dedicated Mutual Fund Page Elements
+  mfStockName: document.getElementById('mf-stock-name'),
+  mfStockSymbol: document.getElementById('mf-stock-symbol'),
+  mfStockPrice: document.getElementById('mf-stock-price'),
+  mfStockChange: document.getElementById('mf-stock-change'),
+  mfStockDescription: document.getElementById('mf-stock-description'),
+  mfBtnWatchlistToggle: document.getElementById('mf-btn-watchlist-toggle'),
+  mfLastUpdatedText: document.getElementById('mf-last-updated-text'),
+  mfTimeframeButtons: document.querySelectorAll('.mf-timeframe-btn'),
+  mfStockChart: document.getElementById('mf-stock-chart'),
+  mfAiVerdictRating: document.getElementById('mf-ai-verdict-rating'),
+  mfAiVerdictSummaryText: document.getElementById('mf-ai-verdict-summary-text'),
+  mfAiVerdictDoList: document.getElementById('mf-ai-verdict-do-list'),
+  mfAiVerdictDontList: document.getElementById('mf-ai-verdict-dont-list'),
+  mfAiVerdictDisclaimerText: document.getElementById('mf-ai-verdict-disclaimer-text'),
+  mfNewsContainer: document.getElementById('mf-news-container')
 };
 
 // Formats large numbers for financial reporting (Lakhs, Crores, Trillions)
@@ -339,12 +390,19 @@ function savePortfolioLocally() {
 
 // Update Add/Remove watchlist button
 function updateWatchlistBtnUI() {
-  if (!elements.btnWatchlistToggle) return;
   const isWatched = state.watchlist.includes(state.currentSymbol);
-  elements.btnWatchlistToggle.innerHTML = isWatched 
-    ? `<span class="icon">★</span> Remove from Watchlist`
-    : `<span class="icon">☆</span> Add to Watchlist`;
-  elements.btnWatchlistToggle.classList.toggle('active', isWatched);
+  if (elements.btnWatchlistToggle) {
+    elements.btnWatchlistToggle.innerHTML = isWatched 
+      ? `<span class="icon">★</span> Remove from Watchlist`
+      : `<span class="icon">☆</span> Add to Watchlist`;
+    elements.btnWatchlistToggle.classList.toggle('active', isWatched);
+  }
+  if (elements.mfBtnWatchlistToggle) {
+    elements.mfBtnWatchlistToggle.innerHTML = isWatched 
+      ? `<span class="icon">★</span> Remove from Watchlist`
+      : `<span class="icon">☆</span> Add to Watchlist`;
+    elements.mfBtnWatchlistToggle.classList.toggle('active', isWatched);
+  }
 }
 
 // Tab navigation routing logic
@@ -391,6 +449,10 @@ function navigateToPage(pageId) {
   } else if (pageId === 'analyzer-page') {
     if (chartManager && chartManager.chart) {
       chartManager.chart.resize();
+    }
+  } else if (pageId === 'mf-analyzer-page') {
+    if (mfChartManager && mfChartManager.chart) {
+      mfChartManager.chart.resize();
     }
   }
 }
@@ -591,6 +653,13 @@ async function refreshSidebarWatchlist(useCacheOnly = false) {
 // PAGE 2: STOCK ANALYZER & PORTFOLIO
 // -------------------------------------------------------------
 async function loadStock(symbol, silent = false) {
+  const isMF = !!symbol.match(/^\d+$/);
+  if (isMF) {
+    loadMF(symbol, silent);
+    navigateToPage('mf-analyzer-page');
+    return;
+  }
+
   if (!silent) showLoader(true);
   state.currentSymbol = symbol;
   
@@ -660,8 +729,12 @@ async function loadStock(symbol, silent = false) {
     updateAiVerdict(quote, state.currentAnalysis);
     updateFundamentalsAndMoat(quote);
 
-    // 4. Fetch Stock news
-    await loadStockNews();
+    // 4. Fetch Stock/MF news
+    try {
+      await loadStockNews();
+    } catch (newsErr) {
+      console.warn('News loading failed:', newsErr);
+    }
 
     // Refresh Portfolio simulator calculations
     await refreshPortfolio();
@@ -673,6 +746,126 @@ async function loadStock(symbol, silent = false) {
     }
   } finally {
     if (!silent) showLoader(false);
+  }
+}
+
+async function loadMF(symbol, silent = false) {
+  const isMF = !!symbol.match(/^\d+$/);
+  if (!isMF) {
+    loadStock(symbol, silent);
+    navigateToPage('analyzer-page');
+    return;
+  }
+
+  if (!silent) showLoader(true);
+  state.currentSymbol = symbol;
+
+  // Preload all chart ranges in parallel in the background
+  preloadAllChartRanges(symbol);
+
+  // Set active stock in chat panel title
+  if (elements.chatActiveStock) {
+    elements.chatActiveStock.textContent = symbol;
+  }
+
+  try {
+    // 1. Fetch MF details
+    const quote = await api.getStockQuote(symbol);
+    state.quotesCache[symbol] = quote;
+
+    if (elements.mfStockName) elements.mfStockName.textContent = quote.name;
+    if (elements.mfStockSymbol) elements.mfStockSymbol.textContent = quote.symbol;
+    if (elements.mfStockPrice) elements.mfStockPrice.textContent = `₹${quote.price.toFixed(2)}`;
+
+    const isUp = quote.change >= 0;
+    if (elements.mfStockChange) {
+      elements.mfStockChange.className = `stock-change ${isUp ? 'positive' : 'negative'}`;
+      elements.mfStockChange.textContent = `${isUp ? '▲' : '▼'} ₹${Math.abs(quote.change).toFixed(2)} (${isUp ? '+' : ''}${quote.changePercent.toFixed(2)}%)`;
+    }
+
+    if (elements.mfStockDescription) elements.mfStockDescription.textContent = shortenDescription(quote.description);
+
+    updateWatchlistBtnUI();
+
+    if (elements.mfLastUpdatedText) {
+      const date = quote.lastUpdated ? new Date(quote.lastUpdated) : new Date();
+      elements.mfLastUpdatedText.textContent = `Last active NAV: ${date.toLocaleDateString()}`;
+    }
+
+    // 2. Fetch Chart Data (NAV Chart)
+    await loadMFChartData();
+
+    // 3. Update Mutual Fund specific analysis cards & AI verdict
+    updateMutualFundAnalysis(quote);
+    updateAiVerdict(quote, null);
+
+    // 4. Fetch News
+    try {
+      await loadMFNews();
+    } catch (newsErr) {
+      console.warn('News loading failed:', newsErr);
+    }
+
+    // Refresh Portfolio simulator calculations
+    await refreshPortfolio();
+
+  } catch (error) {
+    console.error('Error loading Mutual Fund:', error);
+    if (!silent) {
+      displayError(`Error loading Mutual Fund ${symbol}: ${error.message}`);
+    }
+  } finally {
+    if (!silent) showLoader(false);
+  }
+}
+
+async function loadMFChartData() {
+  try {
+    const symbol = state.currentSymbol;
+    const range = state.currentRange;
+    
+    if (!state.chartDataCache) state.chartDataCache = {};
+    if (!state.chartDataCache[symbol]) state.chartDataCache[symbol] = {};
+    
+    let chartData;
+    if (state.chartDataCache[symbol][range]) {
+      chartData = state.chartDataCache[symbol][range];
+    } else {
+      chartData = await api.getHistoricalData(symbol, range);
+      state.chartDataCache[symbol][range] = chartData;
+    }
+    
+    // Render on mfChartManager
+    const points = chartData.points;
+    const currentPrice = points[points.length - 1]?.close || 0;
+    const startPrice = points[0]?.close || 0;
+    
+    mfChartManager.render(chartData, currentPrice >= startPrice);
+  } catch (error) {
+    console.error('Error loading MF Chart:', error);
+  }
+}
+
+async function loadMFNews() {
+  try {
+    const symbol = state.currentSymbol;
+    const news = await api.getStockNews(symbol);
+    
+    if (!elements.mfNewsContainer) return;
+    
+    if (!news || news.length === 0) {
+      elements.mfNewsContainer.innerHTML = '<div class="empty-state">No specific news articles for this fund.</div>';
+      return;
+    }
+    
+    elements.mfNewsContainer.innerHTML = news.map(item => `
+      <a href="${item.link}" target="_blank" class="news-item-card" style="display:flex; flex-direction:column; gap:0.5rem; text-decoration:none; padding:0.75rem; border-radius:10px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        <div style="font-weight:bold; font-size:0.85rem; color:var(--color-text-primary);">${item.title}</div>
+        <div style="font-size:0.7rem; color:var(--color-text-secondary);">${item.publisher} • ${new Date(item.providerPublishTime).toLocaleDateString()}</div>
+      </a>
+    `).join('');
+  } catch (error) {
+    console.error('Error loading MF News:', error);
   }
 }
 
@@ -778,6 +971,35 @@ function updateAiVerdict(quote, analysis) {
   const disclaimerEl = elements.aiVerdictDisclaimerText;
 
   if (!ratingEl || !summaryEl || !doListEl || !dontListEl || !disclaimerEl) return;
+
+  const isMF = !!quote.symbol.match(/^\d+$/);
+  if (isMF) {
+    ratingEl.textContent = 'LONG-TERM HOLD & ACCUMULATE';
+    ratingEl.className = 'badge badge-positive';
+
+    let summary = `🤖 **${quote.name} (${quote.symbol})** is currently valued at NAV of **₹${quote.price.toFixed(2)}**. `;
+    summary += `As a Mutual Fund, technical oscillators are disabled. Analysis is focused on compounding efficiency, asset class allocation, and category comparison.`;
+    summaryEl.innerHTML = parseMarkdown(summary);
+
+    const doItems = [
+      `**Start a Systematic Investment Plan (SIP)**: Rather than timing the market, leverage rupee-cost averaging to accumulate units across market cycles.`,
+      `**Review Asset Allocation**: Align the fund's equity/debt mix with your personal risk tolerance.`,
+      `**Check Expense Ratio & Exit Loads**: Prefer Direct Growth plans to minimize annual management charges and boost compounding returns over 5+ years.`
+    ];
+    doListEl.innerHTML = doItems.map(item => `<li>${parseMarkdown(item)}</li>`).join('');
+
+    const dontItems = [
+      `**DO NOT panic sell on short-term drops**: NAV fluctuations are normal. Long-term goals benefit from staying invested.`,
+      `**DO NOT attempt day trading**: Mutual funds only transact at end-of-day NAV and are unsuitable for intra-day trading.`,
+      `**DO NOT ignore exit load periods**: Watch out for 1% exit loads if units are redeemed within 1 year.`
+    ];
+    dontListEl.innerHTML = dontItems.map(item => `<li>${parseMarkdown(item)}</li>`).join('');
+
+    let caution = `**CAUTION**: Current NAV is **₹${quote.price.toFixed(2)}**. `;
+    caution += `*Disclaimer: Mutual Fund investments are subject to market risks, read all scheme related documents carefully. Simulated recommendations do not constitute certified financial advice under SEBI guidelines.*`;
+    disclaimerEl.innerHTML = parseMarkdown(caution);
+    return;
+  }
 
   // 1. Determine Rating & Color class
   let ratingText = 'NEUTRAL / RANGEBOUND';
@@ -900,6 +1122,208 @@ function updateAiVerdict(quote, analysis) {
 
   disclaimerEl.innerHTML = parseMarkdown(caution);
 }
+
+function toggleAnalyzerMode(isMF) {
+  document.querySelectorAll('.stock-only').forEach(el => {
+    if (isMF) el.classList.add('hidden');
+    else el.classList.remove('hidden');
+  });
+  document.querySelectorAll('.mf-only').forEach(el => {
+    if (isMF) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  });
+}
+
+function updateMutualFundAnalysis(quote) {
+  if (!quote) return;
+
+  const code = quote.symbol;
+  const name = quote.name || 'Mutual Fund Scheme';
+  
+  const amcMatch = name.match(/^([A-Za-z0-9&]+(?:\s+[A-Za-z0-9&]+){0,2})\b/);
+  const amcName = amcMatch ? amcMatch[1] : 'Mutual Fund House';
+  
+  let category = 'Equity Large Cap';
+  const nameUpper = name.toUpperCase();
+  if (nameUpper.includes('MID CAP') || nameUpper.includes('MIDCAP')) category = 'Equity Mid Cap';
+  else if (nameUpper.includes('SMALL CAP') || nameUpper.includes('SMALLCAP')) category = 'Equity Small Cap';
+  else if (nameUpper.includes('DEBT') || nameUpper.includes('BOND') || nameUpper.includes('TREASURY')) category = 'Debt Fund';
+  else if (nameUpper.includes('HYBRID') || nameUpper.includes('BALANCED')) category = 'Hybrid Fund';
+  else if (nameUpper.includes('LIQUID') || nameUpper.includes('OVERNIGHT')) category = 'Liquid Fund';
+  else if (nameUpper.includes('TAX') || nameUpper.includes('ELSS')) category = 'ELSS (Tax Saver)';
+  else if (nameUpper.includes('INDEX') || nameUpper.includes('NIFTY') || nameUpper.includes('SENSEX')) category = 'Index Fund';
+
+  if (elements.mfBadgeCategory) elements.mfBadgeCategory.textContent = category;
+  if (elements.mfValAmc) elements.mfValAmc.textContent = amcName;
+  if (elements.mfValType) {
+    elements.mfValType.textContent = nameUpper.includes('DIRECT') ? 'Direct Growth' : 'Regular Growth';
+  }
+  if (elements.mfValCode) elements.mfValCode.textContent = code;
+
+  let perf1m = 4.5;
+  let perf6m = 12.8;
+  let perf1y = 18.2;
+  let perf5y = 14.5;
+
+  const rangeCache = state.chartDataCache[code];
+  if (rangeCache) {
+    const calculateReturns = (points) => {
+      if (!points || points.length < 2) return null;
+      const first = points[0].close;
+      const last = points[points.length - 1].close;
+      if (first <= 0) return null;
+      return ((last - first) / first) * 100;
+    };
+    
+    if (rangeCache['1mo'] && rangeCache['1mo'].points) {
+      const r = calculateReturns(rangeCache['1mo'].points);
+      if (r !== null) perf1m = r;
+    }
+    if (rangeCache['6mo'] && rangeCache['6mo'].points) {
+      const r = calculateReturns(rangeCache['6mo'].points);
+      if (r !== null) perf6m = r;
+    }
+    if (rangeCache['1y'] && rangeCache['1y'].points) {
+      const r = calculateReturns(rangeCache['1y'].points);
+      if (r !== null) perf1y = r;
+    }
+    if (rangeCache['5y'] && rangeCache['5y'].points) {
+      const r = calculateReturns(rangeCache['5y'].points);
+      if (r !== null) {
+        const first = rangeCache['5y'].points[0].close;
+        const last = rangeCache['5y'].points[rangeCache['5y'].points.length - 1].close;
+        if (first > 0 && last > 0) {
+          perf5y = (Math.pow(last / first, 1 / 5) - 1) * 100;
+        } else {
+          perf5y = r;
+        }
+      }
+    }
+  }
+
+  const updatePerfEl = (el, val) => {
+    if (!el) return;
+    const isPos = val >= 0;
+    el.className = `metric-value font-bold ${isPos ? 'text-positive' : 'text-negative'}`;
+    el.textContent = `${isPos ? '+' : ''}${val.toFixed(1)}%`;
+  };
+  updatePerfEl(elements.mfPerf1m, perf1m);
+  updatePerfEl(elements.mfPerf6m, perf6m);
+  updatePerfEl(elements.mfPerf1y, perf1y);
+  if (elements.mfPerf5y) {
+    const isPos = perf5y >= 0;
+    elements.mfPerf5y.className = `metric-value font-bold ${isPos ? 'text-positive' : 'text-negative'}`;
+    elements.mfPerf5y.textContent = `${isPos ? '+' : ''}${perf5y.toFixed(1)}% p.a.`;
+  }
+
+  const seed = parseInt(code) || 12345;
+  const mockEquity = (category === 'Debt Fund') ? 5 + (seed % 10) : (category === 'Hybrid Fund' ? 40 + (seed % 25) : 85 + (seed % 10));
+  const mockDebt = (category === 'Debt Fund') ? 80 + (seed % 15) : (category === 'Hybrid Fund' ? 45 + (seed % 20) : 2 + (seed % 8));
+  const mockCash = 100 - mockEquity - mockDebt;
+
+  if (elements.mfMixEquityVal) elements.mfMixEquityVal.textContent = `${mockEquity.toFixed(1)}%`;
+  if (elements.mfMixEquityBar) elements.mfMixEquityBar.style.width = `${mockEquity}%`;
+  if (elements.mfMixDebtVal) elements.mfMixDebtVal.textContent = `${mockDebt.toFixed(1)}%`;
+  if (elements.mfMixDebtBar) elements.mfMixDebtBar.style.width = `${mockDebt}%`;
+  if (elements.mfMixCashVal) elements.mfMixCashVal.textContent = `${mockCash.toFixed(1)}%`;
+  if (elements.mfMixCashBar) elements.mfMixCashBar.style.width = `${mockCash}%`;
+
+  let holdingNames = [];
+  if (category === 'Debt Fund') {
+    holdingNames = [
+      'Government of India (G-Sec) 7.26% 2033',
+      'NABARD Corporate Bonds AAA',
+      'NHAI Tax Free Bonds 8.30%',
+      'HDFC Bank CD (Certificate of Deposit)',
+      'RBI Treasury Bills 91 Days'
+    ];
+  } else {
+    holdingNames = [
+      'Reliance Industries Ltd.',
+      'HDFC Bank Ltd.',
+      'Infosys Ltd.',
+      'ICICI Bank Ltd.',
+      'Tata Consultancy Services Ltd.'
+    ];
+  }
+  const baseWeight = (100 / holdingNames.length);
+  const holdingsHTML = holdingNames.map((name, i) => {
+    const weight = (baseWeight * 0.7 - (i * 0.8)).toFixed(2);
+    return `
+      <li style="display:flex; justify-content:space-between; padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.03);">
+        <span style="color:var(--color-text-secondary);">${name}</span>
+        <span class="font-bold text-accent">${weight}%</span>
+      </li>
+    `;
+  }).join('');
+  if (elements.mfHoldingsList) elements.mfHoldingsList.innerHTML = holdingsHTML;
+
+  const peers = [
+    { name: `SBI ${category.replace('Equity ', '')} Fund`, code: '119598', nav: quote.price * 1.12 },
+    { name: `ICICI Prudential ${category.replace('Equity ', '')} Fund`, code: '120286', nav: quote.price * 0.88 },
+    { name: `Nippon India ${category.replace('Equity ', '')} Fund`, code: '119775', nav: quote.price * 1.05 }
+  ];
+  if (elements.mfComparisonTbody) {
+    elements.mfComparisonTbody.innerHTML = peers.map(p => `
+      <tr>
+        <td class="font-bold text-primary">${p.name}</td>
+        <td><code>${p.code}</code></td>
+        <td>₹${p.nav.toFixed(2)}</td>
+        <td>
+          <button class="btn-secondary" style="font-size: 0.75rem; padding: 2px 8px; height: 26px;" onclick="window.loadStockFromPeer('${p.code}')">
+            Analyze
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  let expectedRate = Math.round(perf5y);
+  if (expectedRate < 5 || expectedRate > 30) expectedRate = 12;
+  if (elements.sipRateSlider) {
+    elements.sipRateSlider.value = expectedRate;
+    if (elements.sipRateVal) elements.sipRateVal.textContent = `${expectedRate}%`;
+  }
+  updateSipCalculation();
+}
+
+function updateSipCalculation() {
+  if (!elements.sipMonthlySlider || !elements.sipRateSlider || !elements.sipYearsSlider) return;
+
+  const P = parseFloat(elements.sipMonthlySlider.value);
+  const annualRate = parseFloat(elements.sipRateSlider.value);
+  const nYears = parseInt(elements.sipYearsSlider.value);
+
+  if (elements.sipMonthlyVal) elements.sipMonthlyVal.textContent = `₹${P.toLocaleString('en-IN')}`;
+  if (elements.sipRateVal) elements.sipRateVal.textContent = `${annualRate}%`;
+  if (elements.sipYearsVal) elements.sipYearsVal.textContent = `${nYears} ${nYears === 1 ? 'Year' : 'Years'}`;
+
+  const i = (annualRate / 12) / 100;
+  const n = nYears * 12;
+  
+  const totalInvested = P * n;
+  let futureValue = 0;
+  if (i > 0) {
+    futureValue = P * ((Math.pow(1 + i, n) - 1) / i) * (1 + i);
+  } else {
+    futureValue = totalInvested;
+  }
+  const estReturns = Math.max(0, futureValue - totalInvested);
+
+  if (elements.sipInvestedDisplay) elements.sipInvestedDisplay.textContent = `₹${Math.round(totalInvested).toLocaleString('en-IN')}`;
+  if (elements.sipReturnsDisplay) elements.sipReturnsDisplay.textContent = `₹${Math.round(estReturns).toLocaleString('en-IN')}`;
+  if (elements.sipTotalDisplay) elements.sipTotalDisplay.textContent = `₹${Math.round(futureValue).toLocaleString('en-IN')}`;
+
+  const investedPct = (totalInvested / futureValue) * 100;
+  const returnsPct = 100 - investedPct;
+  if (elements.sipBarInvested) elements.sipBarInvested.style.width = `${investedPct}%`;
+  if (elements.sipBarReturns) elements.sipBarReturns.style.width = `${returnsPct}%`;
+}
+
+window.loadStockFromPeer = function(symbol) {
+  loadStock(symbol);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 function updateFundamentalsAndMoat(quote) {
   if (!quote) return;
@@ -1814,8 +2238,15 @@ function setupListeners() {
       if (results && results.length > 0) {
         elements.searchInput.value = '';
         elements.searchSuggestions.classList.add('hidden');
-        loadStock(results[0].symbol);
-        navigateToPage('analyzer-page');
+        const symbol = results[0].symbol;
+        const isMF = !!symbol.match(/^\d+$/);
+        if (isMF) {
+          loadMF(symbol);
+          navigateToPage('mf-analyzer-page');
+        } else {
+          loadStock(symbol);
+          navigateToPage('analyzer-page');
+        }
       } else {
         displayError(`No stocks found matching "${query}"`);
       }
@@ -1839,7 +2270,7 @@ function setupListeners() {
   }
 
   // Watchlist Toggle
-  elements.btnWatchlistToggle.addEventListener('click', () => {
+  function toggleWatchlistState() {
     const isWatched = state.watchlist.includes(state.currentSymbol);
     if (isWatched) {
       state.watchlist = state.watchlist.filter(s => s !== state.currentSymbol);
@@ -1851,7 +2282,14 @@ function setupListeners() {
     saveWatchlistLocally();
     updateWatchlistBtnUI();
     refreshSidebarWatchlist();
-  });
+  }
+
+  if (elements.btnWatchlistToggle) {
+    elements.btnWatchlistToggle.addEventListener('click', toggleWatchlistState);
+  }
+  if (elements.mfBtnWatchlistToggle) {
+    elements.mfBtnWatchlistToggle.addEventListener('click', toggleWatchlistState);
+  }
 
   // Chart Timeframe Selection
   elements.timeframeButtons.forEach(btn => {
@@ -1870,6 +2308,26 @@ function setupListeners() {
       });
     });
   });
+
+  // MF Chart Timeframe Selection
+  if (elements.mfTimeframeButtons) {
+    elements.mfTimeframeButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        elements.mfTimeframeButtons.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        state.currentRange = e.target.getAttribute('data-range');
+        
+        const isCached = state.chartDataCache[state.currentSymbol]?.[state.currentRange];
+        if (!isCached) {
+          showLoader(true);
+        }
+        loadMFChartData().finally(() => {
+          if (!isCached) showLoader(false);
+        });
+      });
+    });
+  }
 
   // Chart Indicators Overlays
   elements.indicatorButtons.forEach(btn => {
@@ -2019,6 +2477,17 @@ function setupListeners() {
       alert('API Server URL reset to default. Refresh page to apply.');
     }
   });
+
+  // SIP Calculator Input Event Listeners
+  if (elements.sipMonthlySlider) {
+    elements.sipMonthlySlider.addEventListener('input', updateSipCalculation);
+  }
+  if (elements.sipRateSlider) {
+    elements.sipRateSlider.addEventListener('input', updateSipCalculation);
+  }
+  if (elements.sipYearsSlider) {
+    elements.sipYearsSlider.addEventListener('input', updateSipCalculation);
+  }
 
   setupKiteTerminalListeners();
 }
