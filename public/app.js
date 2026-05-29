@@ -642,8 +642,14 @@ async function refreshSidebarWatchlist(useCacheOnly = false) {
         updateWatchlistBtnUI();
         return;
       }
-      loadStock(quote.symbol);
-      navigateToPage('analyzer-page');
+      const isMF = /^\d+$/.test(quote.symbol);
+      if (isMF) {
+        loadMF(quote.symbol);
+        navigateToPage('mf-analyzer-page');
+      } else {
+        loadStock(quote.symbol);
+        navigateToPage('analyzer-page');
+      }
     });
     listContainer.appendChild(card);
   });
@@ -1713,8 +1719,14 @@ function refreshScreenerTable() {
   elements.screenerResultsBody.querySelectorAll('.btn-view-analyzer').forEach(btn => {
     btn.addEventListener('click', () => {
       const sym = btn.getAttribute('data-symbol');
-      loadStock(sym);
-      navigateToPage('analyzer-page');
+      const isMF = /^\d+$/.test(sym);
+      if (isMF) {
+        loadMF(sym);
+        navigateToPage('mf-analyzer-page');
+      } else {
+        loadStock(sym);
+        navigateToPage('analyzer-page');
+      }
     });
   });
 }
@@ -2158,8 +2170,14 @@ const handleSuggestions = debounce(async (query) => {
         elements.searchInput.value = '';
         elements.searchSuggestions.classList.add('hidden');
         elements.searchSuggestions.innerHTML = '';
-        loadStock(item.symbol);
-        navigateToPage('analyzer-page');
+        const isMF = /^\d+$/.test(item.symbol);
+        if (isMF) {
+          loadMF(item.symbol);
+          navigateToPage('mf-analyzer-page');
+        } else {
+          loadStock(item.symbol);
+          navigateToPage('analyzer-page');
+        }
       });
       elements.searchSuggestions.appendChild(div);
     });
@@ -2682,8 +2700,14 @@ function renderKiteHoldings(holdings) {
     // Click row to view stock details
     tr.addEventListener('click', () => {
       const symNS = h.tradingsymbol.match(/^\d+$/) ? h.tradingsymbol : `${h.tradingsymbol}.NS`;
-      loadStock(symNS);
-      navigateToPage('analyzer-page');
+      const isMF = /^\d+$/.test(symNS);
+      if (isMF) {
+        loadMF(symNS);
+        navigateToPage('mf-analyzer-page');
+      } else {
+        loadStock(symNS);
+        navigateToPage('analyzer-page');
+      }
     });
 
     elements.kiteHoldingsTbody.appendChild(tr);
