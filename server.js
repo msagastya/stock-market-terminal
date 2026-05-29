@@ -8,6 +8,15 @@ const kiteService = require('./kite-service');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Prevent server crash on unhandled network/socket errors or localtunnel disconnects
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception caught:', err.message || err);
+  if (err.stack) console.error(err.stack);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Initialize Yahoo Finance client with suppressed notices and validation logging disabled
 const yahooFinance = new YahooFinance({
   suppressNotices: ['yahooSurvey', 'ripHistorical'],
@@ -1254,6 +1263,10 @@ app.listen(PORT, async () => {
       } catch (kvErr) {
         console.error('⚠️ Failed to publish tunnel URL to KV store:', kvErr.message);
       }
+
+      tunnel.on('error', (err) => {
+        console.error('⚠️ Localtunnel client error:', err.message || err);
+      });
 
       tunnel.on('close', () => {
         console.log('📡 Secure tunnel closed.');
