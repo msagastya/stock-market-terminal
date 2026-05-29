@@ -261,7 +261,6 @@
     border-color: rgba(255, 255, 255, 0.15);
   }
 
-  /* Page Sections (views) */
   .page-section {
     flex: 1;
     overflow-y: auto;
@@ -272,6 +271,113 @@
     max-width: 1200px;
     width: 100%;
     margin-inline: auto;
+  }
+
+  /* Mobile and Tablet Responsive Layout */
+  @media (max-width: 991px) {
+    .terminal-layout {
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border-right: none;
+      border-bottom: 1px solid var(--color-border);
+      min-height: 60px;
+    }
+
+    .sidebar-logo {
+      padding: 0;
+      border-bottom: none;
+    }
+
+    .sidebar-nav {
+      flex-direction: row;
+      flex: none;
+      padding: 0;
+      margin: 0;
+      gap: 0.5rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      max-width: calc(100% - 160px);
+    }
+
+    .sidebar-nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-item {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    .sidebar-user {
+      display: none !important;
+    }
+
+    .workspace {
+      height: calc(100vh - 60px);
+    }
+
+    .workspace-header {
+      padding: 0.75rem 1rem;
+      min-height: 50px;
+      gap: 1rem;
+    }
+
+    .page-section {
+      padding: 1rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .sidebar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .sidebar-logo {
+      justify-content: center;
+    }
+
+    .sidebar-nav {
+      max-width: 100%;
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .workspace {
+      height: auto;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .workspace-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .header-search-container {
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .header-actions {
+      justify-content: space-between;
+      width: 100%;
+    }
   }
 }
 
