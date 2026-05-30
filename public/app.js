@@ -183,6 +183,7 @@ const elements = {
   moteCheckboxes: document.querySelectorAll('.mote-checkbox'),
   moteNotes: document.getElementById('mote-notes'),
   btnSaveMote: document.getElementById('btn-save-mote'),
+  btnAiSuggestMote: document.getElementById('btn-ai-suggest-mote'),
 
   // PAGE 6: Settings
   settingsSyncStatusBadge: document.getElementById('settings-sync-status-badge'),
@@ -2023,6 +2024,91 @@ async function refreshMotePage() {
   }
 }
 
+async function suggestMoteReport() {
+  const symbol = state.currentSymbol;
+  if (!symbol) return;
+
+  const isMF = /^\d+$/.test(symbol);
+  if (isMF) {
+    displayError("Economic Moat checklists are only applicable for Stocks, not Mutual Funds.");
+    return;
+  }
+
+  showLoader(true);
+  try {
+    const quote = state.quotesCache[symbol] || await api.getStockQuote(symbol);
+    
+    let qBrand = false;
+    let qSwitching = false;
+    let qNetwork = false;
+    let qCost = false;
+    let qBarriers = false;
+    let notes = '';
+
+    const name = quote.name || symbol;
+    const sector = quote.sector || '';
+    const industry = quote.industry || '';
+    const mcap = quote.marketCap || 0;
+
+    notes += `🤖 **AI Competitive Moat Analysis for ${name} (${symbol})**:\n\n`;
+
+    // 1. Brand pricing power
+    const isBrandGiant = ['reliance.ns', 'tcs.ns', 'infy.ns', 'itc.ns', 'titan.ns', 'hindunilvr.ns', 'maruti.ns', 'tata-motors.ns', 'asianpaints.ns'].includes(symbol.toLowerCase());
+    if (isBrandGiant || ['FMCG & Consumer', 'Automobile'].includes(sector) || industry.includes('Consumer') || industry.includes('Apparel')) {
+      qBrand = true;
+      notes += `• **Brand Power (Checked)**: ${name} operates in the ${sector}/${industry} domain where customer loyalty and brand recall are highly defensive. This provides pricing power over generic rivals.\n`;
+    }
+
+    // 2. High switching costs
+    if (['Financial Services', 'Technology'].includes(sector) || industry.includes('Software') || industry.includes('Banking') || industry.includes('IT Services')) {
+      qSwitching = true;
+      notes += `• **Switching Costs (Checked)**: High migration complexity. Clients using ${name}'s enterprise solutions or banking pipelines face severe operational disruption and financial costs if switching to rivals.\n`;
+    }
+
+    // 3. Network effects
+    const isPlatform = ['reliance.ns', 'cdsl.ns', 'mcx.ns', 'irctc.ns', 'zomato.ns', 'nykaa.ns'].includes(symbol.toLowerCase()) || industry.includes('Platform') || industry.includes('Internet') || industry.includes('Telecom');
+    if (isPlatform) {
+      qNetwork = true;
+      notes += `• **Network Effects (Checked)**: Platform scale loop. The utility of ${name}'s services scales exponentially as more consumers, merchants, or market participants enter its digital ecosystem.\n`;
+    }
+
+    // 4. Cost advantage
+    const isCostGiant = mcap > 1000000000000 || ['Energy & Utilities', 'Materials & Metals'].includes(sector);
+    if (isCostGiant) {
+      qCost = true;
+      notes += `• **Cost Advantage (Checked)**: Enjoys structural scale benefits. Massive capital efficiency, vertical integration, or raw procurement scale allows ${name} to maintain superior gross margins.\n`;
+    }
+
+    // 5. High entry barriers
+    const isBarrierHeavy = ['Energy & Utilities', 'Industrials & Infrastructure'].includes(sector) || ['government', 'defense', 'mining', 'telecom', 'railway', 'aerospace'].some(kw => name.toLowerCase().includes(kw) || industry.toLowerCase().includes(kw));
+    if (isBarrierHeavy || isPlatform) {
+      qBarriers = true;
+      notes += `• **Entry Barriers (Checked)**: High regulatory and capital barriers. Government licenses, strict compliance regulations, or massive capital requirements prevent new competitors from entering.\n`;
+    }
+
+    if (!qBrand && !qSwitching && !qNetwork && !qCost && !qBarriers) {
+      notes += `• **No Major Moats Found**: This company operates in a highly commoditized, competitive, or fragmented market. Competitive advantage is low, margins are thin, and entry barriers are minimal.\n`;
+    } else {
+      notes += `\n*Conclusion*: This stock possesses structural competitive advantages that protect its return on equity (ROE) from erosion.`;
+    }
+
+    document.getElementById('mote-q-brand').checked = qBrand;
+    document.getElementById('mote-q-switching').checked = qSwitching;
+    document.getElementById('mote-q-network').checked = qNetwork;
+    document.getElementById('mote-q-cost').checked = qCost;
+    document.getElementById('mote-q-barriers').checked = qBarriers;
+    elements.moteNotes.value = notes;
+
+    calculateMoteRating();
+
+  } catch (err) {
+    console.error("Failed to generate AI moat suggestion:", err);
+    displayError("Failed to fetch stock info for AI moat suggestion.");
+  } finally {
+    showLoader(false);
+  }
+}
+
 function calculateMoteRating() {
   let score = 0;
   elements.moteCheckboxes.forEach(cb => {
@@ -2443,6 +2529,11 @@ function setupListeners() {
   // Save Mote Report
   elements.btnSaveMote.addEventListener('click', () => {
     saveMoteReport();
+  });
+
+  // AI Suggest Moat Report
+  elements.btnAiSuggestMote.addEventListener('click', () => {
+    suggestMoteReport();
   });
 
   // Chatbot send message form
